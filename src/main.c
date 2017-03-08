@@ -1,6 +1,8 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <errno.h>
+#include <signal.h>
 #include <unistd.h>
 #include <sys/socket.h>
 #include <sys/un.h>
@@ -335,26 +337,44 @@ print_usage(FILE *stream)
 int
 main(int argc, char **argv)
 {
+    sigset_t sigset;
     int rc;
 
     if (!g_os_started) {
         if (argc < 3) {
             print_usage(stderr);
-            return 1;
+            return EXIT_FAILURE;
         }
 
         blehostd_dev_filename = argv[1];
         blehostd_socket_filename = argv[2];
 
-        dprintf(1, "blehostd_dev_filename=%s blehostd_socket_filename=%s\n", blehostd_dev_filename, blehostd_socket_filename);
+        BHD_LOG(DEBUG,
+                "blehostd_dev_filename=%s blehostd_socket_filename=%s\n",
+                blehostd_dev_filename, blehostd_socket_filename);
 
 #ifdef ARCH_sim
         mcu_sim_parse_args(1, argv);
 #endif
     }
 
+    sigemptyset(&sigset);
+    sigaddset(&sigset, SIGINT);
+
+    errno = 0;
+    rc = sigprocmask(SIG_BLOCK, &sigset, NULL);
+    if (rc != 0) {
+        fprintf(stderr, "sigprocmask failed; %d (%s)\n",
+                errno, strerror(errno));
+        return EXIT_FAILURE;
+    }
+
     rc = uart_set_dev(MYNEWT_VAL(BLE_HCI_UART_PORT), blehostd_dev_filename);
-    assert(rc == 0);
+    if (rc != 0) {
+        fprintf(stderr, "Failed to open a serial connection to %s\n",
+                blehostd_dev_filename);
+        return EXIT_FAILURE;
+    }
 
     sysinit();
 
