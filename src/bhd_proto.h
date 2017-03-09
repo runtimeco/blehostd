@@ -22,6 +22,7 @@
 #define BHD_MSG_TYPE_EXCHANGE_MTU           11
 #define BHD_MSG_TYPE_GEN_RAND_ADDR          12
 #define BHD_MSG_TYPE_SET_RAND_ADDR          13
+#define BHD_MSG_TYPE_CONN_CANCEL            14
 
 #define BHD_MSG_TYPE_SYNC_EVT               2049
 #define BHD_MSG_TYPE_CONNECT_EVT            2050
@@ -29,8 +30,8 @@
 #define BHD_MSG_TYPE_DISC_SVC_EVT           2052
 #define BHD_MSG_TYPE_DISC_CHR_EVT           2053
 #define BHD_MSG_TYPE_WRITE_ACK_EVT          2054
-#define BHD_MSG_TYPE_NOTIFY_RX_EVT          2056
-#define BHD_MSG_TYPE_MTU_CHANGE_EVT         2057
+#define BHD_MSG_TYPE_NOTIFY_RX_EVT          2055
+#define BHD_MSG_TYPE_MTU_CHANGE_EVT         2056
 
 #define BHD_ADDR_TYPE_NONE                  255
 
@@ -179,6 +180,10 @@ struct bhd_set_rand_addr_rsp {
     int status;
 };
 
+struct bhd_conn_cancel_rsp {
+    int status;
+};
+
 struct bhd_rsp {
     struct bhd_msg_hdr hdr;
     union {
@@ -194,6 +199,7 @@ struct bhd_rsp {
         struct bhd_exchange_mtu_rsp exchange_mtu;
         struct bhd_gen_rand_addr_rsp gen_rand_addr;
         struct bhd_set_rand_addr_rsp set_rand_addr;
+        struct bhd_conn_cancel_rsp conn_cancel;
     };
 };
 

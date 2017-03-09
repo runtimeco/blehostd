@@ -27,6 +27,7 @@ static bhd_req_handle_fn bhd_write_cmd_req_handle;
 static bhd_req_handle_fn bhd_exchange_mtu_req_handle;
 static bhd_req_handle_fn bhd_gen_rand_addr_handle;
 static bhd_req_handle_fn bhd_set_rand_addr_handle;
+static bhd_req_handle_fn bhd_conn_cancel_handle;
 
 static const struct bhd_req_dispatch_entry {
     int req_type;
@@ -44,6 +45,7 @@ static const struct bhd_req_dispatch_entry {
     { BHD_MSG_TYPE_EXCHANGE_MTU, bhd_exchange_mtu_req_handle },
     { BHD_MSG_TYPE_GEN_RAND_ADDR, bhd_gen_rand_addr_handle },
     { BHD_MSG_TYPE_SET_RAND_ADDR, bhd_set_rand_addr_handle },
+    { BHD_MSG_TYPE_CONN_CANCEL, bhd_conn_cancel_handle },
 
     { -1 },
 };
@@ -61,6 +63,7 @@ static bhd_subrsp_enc_fn bhd_write_rsp_enc;
 static bhd_subrsp_enc_fn bhd_exchange_mtu_rsp_enc;
 static bhd_subrsp_enc_fn bhd_gen_rand_addr_rsp_enc;
 static bhd_subrsp_enc_fn bhd_set_rand_addr_rsp_enc;
+static bhd_subrsp_enc_fn bhd_conn_cancel_rsp_enc;
 
 static const struct bhd_rsp_dispatch_entry {
     int rsp_type;
@@ -79,6 +82,7 @@ static const struct bhd_rsp_dispatch_entry {
     { BHD_MSG_TYPE_EXCHANGE_MTU, bhd_exchange_mtu_rsp_enc },
     { BHD_MSG_TYPE_GEN_RAND_ADDR, bhd_gen_rand_addr_rsp_enc },
     { BHD_MSG_TYPE_SET_RAND_ADDR, bhd_set_rand_addr_rsp_enc },
+    { BHD_MSG_TYPE_CONN_CANCEL, bhd_conn_cancel_rsp_enc },
 
     { -1 },
 };
@@ -609,6 +613,14 @@ bhd_set_rand_addr_handle(cJSON *parent, struct bhd_req *req,
     return 1;
 }
 
+static int
+bhd_conn_cancel_handle(cJSON *parent, struct bhd_req *req,
+                          struct bhd_rsp *rsp)
+{
+    bhd_gap_conn_cancel(req, rsp);
+    return 1;
+}
+
 /**
  * @return                      1 if a response should be sent;
  *                              0 for no response.
@@ -775,6 +787,13 @@ static int
 bhd_set_rand_addr_rsp_enc(cJSON *parent, const struct bhd_rsp *rsp)
 {
     bhd_json_add_int(parent, "status", rsp->set_rand_addr.status);
+    return 0;
+}
+
+static int
+bhd_conn_cancel_rsp_enc(cJSON *parent, const struct bhd_rsp *rsp)
+{
+    bhd_json_add_int(parent, "status", rsp->conn_cancel.status);
     return 0;
 }
 

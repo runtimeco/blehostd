@@ -202,3 +202,9 @@ bhd_gap_terminate(const struct bhd_req *req, struct bhd_rsp *out_rsp)
         ble_gap_terminate(req->terminate.conn_handle,
                           req->terminate.hci_reason);
 }
+
+void
+bhd_gap_conn_cancel(const struct bhd_req *req, struct bhd_rsp *out_rsp)
+{
+    out_rsp->conn_cancel.status = ble_gap_conn_cancel();
+}
