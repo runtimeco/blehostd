@@ -1,0 +1,2 @@
+syscfg.vals:
+    OS_MAIN_TASK_PRIO: 1
