@@ -21,6 +21,7 @@ int
 bhd_gap_send_connect_evt(uint16_t seq, uint16_t conn_handle, int status)
 {
     struct bhd_evt evt = {{0}};
+    struct ble_gap_conn_desc desc;
     int rc;
 
     evt.hdr.op = BHD_MSG_OP_EVT;
@@ -28,11 +29,28 @@ bhd_gap_send_connect_evt(uint16_t seq, uint16_t conn_handle, int status)
     evt.hdr.seq = seq;
     evt.connect.status = status;
 
-    if (conn_handle != BLE_HS_CONN_HANDLE_NONE) {
-        rc = ble_gap_conn_find(conn_handle, &evt.connect.desc);
+    if (status == 0) {
+        rc = ble_gap_conn_find(conn_handle, &desc);
         if (rc != 0) {
             return rc;
         }
+
+        evt.connect.conn_handle = conn_handle;
+        evt.connect.conn_itvl = desc.conn_itvl;
+        evt.connect.conn_latency = desc.conn_latency;
+        evt.connect.supervision_timeout = desc.supervision_timeout;
+        evt.connect.role = desc.role;
+        evt.connect.master_clock_accuracy = desc.master_clock_accuracy;
+
+        evt.connect.our_id_addr = desc.our_id_addr;
+        evt.connect.peer_id_addr = desc.peer_id_addr;
+        evt.connect.our_ota_addr = desc.our_ota_addr;
+        evt.connect.peer_ota_addr = desc.peer_ota_addr;
+
+        evt.connect.encrypted = desc.sec_state.encrypted;
+        evt.connect.authenticated = desc.sec_state.authenticated;
+        evt.connect.bonded = desc.sec_state.bonded;
+        evt.connect.key_size = desc.sec_state.key_size;
     }
 
     rc = bhd_evt_send(&evt);

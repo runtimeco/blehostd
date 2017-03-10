@@ -6,6 +6,7 @@
 #include "bhd_proto.h"
 #include "bhd_gattc.h"
 #include "bhd_gap.h"
+#include "bhd_util.h"
 #include "bhd_id.h"
 #include "parse.h"
 #include "defs/error.h"
@@ -844,13 +845,52 @@ bhd_sync_evt_enc(cJSON *parent, const struct bhd_evt *evt)
 static int
 bhd_connect_evt_enc(cJSON *parent, const struct bhd_evt *evt)
 {
-    int rc;
-
     bhd_json_add_int(parent, "status", evt->connect.status);
-    rc = bhd_conn_desc_enc(parent, &evt->connect.desc);
-    if (rc != 0) {
-        return rc;
+
+    if (evt->connect.conn_handle != BLE_HS_CONN_HANDLE_NONE) {
+        bhd_json_add_int(parent, "conn_handle", evt->connect.conn_handle);
     }
+
+    bhd_json_add_int(parent, "conn_itvl", evt->connect.conn_itvl);
+    bhd_json_add_int(parent, "conn_latency", evt->connect.conn_latency);
+    bhd_json_add_int(parent, "supervision_timeout",
+                     evt->connect.supervision_timeout);
+    bhd_json_add_int(parent, "role", evt->connect.role);
+    bhd_json_add_int(parent, "master_clock_accuracy",
+                     evt->connect.master_clock_accuracy);
+
+    if (evt->connect.our_id_addr.type != BHD_ADDR_TYPE_NONE) {
+        bhd_json_add_addr_type(parent, "own_id_addr_type",
+                               evt->connect.our_id_addr.type);
+        bhd_json_add_addr(parent, "own_id_addr",
+                          evt->connect.our_id_addr.val);
+    }
+
+    if (evt->connect.our_ota_addr.type != BHD_ADDR_TYPE_NONE) {
+        bhd_json_add_addr_type(parent, "own_ota_addr_type",
+                               evt->connect.our_ota_addr.type);
+        bhd_json_add_addr(parent, "own_ota_addr",
+                          evt->connect.our_ota_addr.val);
+    }
+
+    if (evt->connect.peer_id_addr.type != BHD_ADDR_TYPE_NONE) {
+        bhd_json_add_addr_type(parent, "peer_id_addr_type",
+                               evt->connect.peer_id_addr.type);
+        bhd_json_add_addr(parent, "peer_id_addr",
+                          evt->connect.peer_id_addr.val);
+    }
+
+    if (evt->connect.peer_ota_addr.type != BHD_ADDR_TYPE_NONE) {
+        bhd_json_add_addr_type(parent, "peer_ota_addr_type",
+                               evt->connect.peer_ota_addr.type);
+        bhd_json_add_addr(parent, "peer_ota_addr",
+                          evt->connect.peer_ota_addr.val);
+    }
+
+    bhd_json_add_bool(parent, "encrypted", evt->connect.encrypted);
+    bhd_json_add_bool(parent, "authenticated", evt->connect.authenticated);
+    bhd_json_add_bool(parent, "bonded", evt->connect.bonded);
+    bhd_json_add_int(parent, "key_size", evt->connect.key_size);
 
     return 0;
 }

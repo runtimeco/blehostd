@@ -208,8 +208,24 @@ struct bhd_sync_evt {
 };
 
 struct bhd_connect_evt {
-    struct ble_gap_conn_desc desc;
     int status;
+
+    uint16_t conn_handle;
+    uint16_t conn_itvl;
+    uint16_t conn_latency;
+    uint16_t supervision_timeout;
+    uint8_t role;
+    uint8_t master_clock_accuracy;
+
+    ble_addr_t our_id_addr;
+    ble_addr_t peer_id_addr;
+    ble_addr_t our_ota_addr;
+    ble_addr_t peer_ota_addr;
+
+    uint8_t encrypted;
+    uint8_t authenticated;
+    uint8_t bonded;
+    uint8_t key_size;
 };
 
 struct bhd_disconnect_evt {

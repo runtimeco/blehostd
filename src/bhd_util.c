@@ -392,6 +392,12 @@ bhd_json_add_int(cJSON *parent, const char *name, int64_t val)
     cJSON_AddItemToObject(parent, name, cJSON_CreateNumber(val));
 }
 
+void
+bhd_json_add_bool(cJSON *parent, const char *name, int val)
+{
+    cJSON_AddItemToObject(parent, name, cJSON_CreateBool(val));
+}
+
 int
 bhd_json_add_addr_type(cJSON *parent, const char *name, uint8_t addr_type)
 {
