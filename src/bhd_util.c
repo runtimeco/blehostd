@@ -523,3 +523,35 @@ bhd_send_sync_evt(uint32_t seq)
     rc = bhd_evt_send(&evt);
     return rc;
 }
+
+char *
+bhd_mbuf_to_s(const struct os_mbuf *om, char *str, size_t maxlen)
+{
+    char *dst;
+    uint8_t byte;
+    size_t remlen;
+    size_t moff;
+    int rc;
+
+    dst = str;
+    remlen = maxlen;
+
+    for (moff = 0; moff < OS_MBUF_PKTLEN(om); moff++) {
+        if (moff != 0) {
+            rc = snprintf(dst, remlen, ":");
+            dst += rc;
+            remlen -= rc;
+        }
+        
+        rc = os_mbuf_copydata(om, moff, 1, &byte);
+        if (rc != 0) {
+            break;
+        }
+
+        rc = snprintf(dst, remlen, "0x%02x", byte);
+        dst += rc;
+        remlen -= rc;
+    }
+
+    return str;
+}

@@ -29,4 +29,6 @@ void bhd_json_add_uuid(cJSON *parent, const char *name,
 int bhd_json_add_addr_type(cJSON *parent, const char *name, uint8_t addr_type);
 int bhd_json_add_addr(cJSON *parent, const char *name, const uint8_t *addr);
 
+char *bhd_mbuf_to_s(const struct os_mbuf *om, char *str, size_t maxlen);
+
 #endif

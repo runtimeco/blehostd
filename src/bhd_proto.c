@@ -487,7 +487,7 @@ bhd_disc_chr_uuid_req_handle(cJSON *parent,
  * @return                      0 on success; nonzero on failure.
  */
 static int
-bhd_write_req_dec(cJSON *parent, uint8_t *attr_buf,
+bhd_write_req_dec(cJSON *parent, uint8_t *attr_buf, int attr_buf_sz,
                   struct bhd_req *req, struct bhd_rsp *rsp)
 {
     int rc;
@@ -505,7 +505,7 @@ bhd_write_req_dec(cJSON *parent, uint8_t *attr_buf,
     }
 
     req->write.data = attr_buf;
-    bhd_json_hex_string(parent, "data", BLE_ATT_ATTR_MAX_LEN, attr_buf,
+    bhd_json_hex_string(parent, "data", attr_buf_sz, attr_buf,
                         &req->write.data_len, &rc);
 
     if (rc != 0) {
@@ -523,10 +523,10 @@ static int
 bhd_write_req_handle(cJSON *parent,
                      struct bhd_req *req, struct bhd_rsp *rsp)
 {
-    uint8_t buf[BLE_ATT_ATTR_MAX_LEN];
+    uint8_t buf[BLE_ATT_ATTR_MAX_LEN + 3];
     int rc;
 
-    rc = bhd_write_req_dec(parent, buf, req, rsp);
+    rc = bhd_write_req_dec(parent, buf, sizeof buf, req, rsp);
     if (rc != 0) {
         return 1;
     }
@@ -543,10 +543,10 @@ static int
 bhd_write_cmd_req_handle(cJSON *parent,
                          struct bhd_req *req, struct bhd_rsp *rsp)
 {
-    uint8_t buf[BLE_ATT_ATTR_MAX_LEN];
+    uint8_t buf[BLE_ATT_ATTR_MAX_LEN + 3];
     int rc;
 
-    rc = bhd_write_req_dec(parent, buf, req, rsp);
+    rc = bhd_write_req_dec(parent, buf, sizeof buf, req, rsp);
     if (rc != 0) {
         return 1;
     }
@@ -978,7 +978,7 @@ bhd_write_ack_evt_enc(cJSON *parent, const struct bhd_evt *evt)
 static int
 bhd_notify_rx_evt_enc(cJSON *parent, const struct bhd_evt *evt)
 {
-    char buf[BLE_ATT_ATTR_MAX_LEN * 3];
+    char buf[BLE_ATT_ATTR_MAX_LEN * 5]; /* 0xXX[:] */
 
     bhd_json_add_int(parent, "conn_handle", evt->notify_rx.conn_handle);
     bhd_json_add_int(parent, "attr_handle", evt->notify_rx.attr_handle);
