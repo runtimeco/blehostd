@@ -17,8 +17,8 @@ static const struct ble_gap_conn_desc bhd_gap_null_desc = {
     .peer_ota_addr = { BHD_ADDR_TYPE_NONE },
 };
 
-int
-bhd_gap_send_connect_evt(uint16_t seq, uint16_t conn_handle, int status)
+static int
+bhd_gap_send_connect_evt(bhd_seq_t seq, uint16_t conn_handle, int status)
 {
     struct bhd_evt evt = {{0}};
     struct ble_gap_conn_desc desc;
@@ -111,6 +111,42 @@ bhd_gap_send_notify_rx_evt(uint16_t conn_handle, uint16_t attr_handle,
 }
 
 static int
+bhd_gap_send_scan_evt(bhd_seq_t seq, const struct ble_gap_disc_desc *desc)
+{
+    struct bhd_evt evt = {{0}};
+    struct ble_hs_adv_fields fields;
+    int rc;
+
+    evt.hdr.op = BHD_MSG_OP_EVT;
+    evt.hdr.type = BHD_MSG_TYPE_SCAN_EVT;
+    evt.hdr.seq = seq;
+
+    evt.scan.event_type = desc->event_type;
+    evt.scan.length_data = desc->length_data;
+    evt.scan.addr = desc->addr;
+    evt.scan.rssi = desc->rssi;
+    memcpy(evt.scan.data, desc->data, evt.scan.length_data);
+    evt.scan.direct_addr = desc->direct_addr;
+    
+    rc = ble_hs_adv_parse_fields(&fields, evt.scan.data, evt.scan.length_data);
+    if (rc == 0) {
+        evt.scan.data_flags = fields.flags;
+        if (fields.name != NULL) {
+            memcpy(evt.scan.data_name, fields.name, fields.name_len);
+            evt.scan.data_name_len = fields.name_len;
+            evt.scan.data_name_is_complete = fields.name_is_complete;
+        }
+    }
+
+    rc = bhd_evt_send(&evt);
+    if (rc != 0) {
+        return rc;
+    }
+
+    return 0;
+}
+
+static int
 bhd_gap_event(struct ble_gap_event *event, void *arg)
 {
     uint8_t buf[BLE_ATT_ATTR_MAX_LEN];
@@ -122,6 +158,7 @@ bhd_gap_event(struct ble_gap_event *event, void *arg)
 
     switch (event->type) {
     case BLE_GAP_EVENT_DISC:
+        bhd_gap_send_scan_evt(seq, &event->disc);
         return 0;
 
     case BLE_GAP_EVENT_CONNECT:
@@ -225,4 +262,29 @@ void
 bhd_gap_conn_cancel(const struct bhd_req *req, struct bhd_rsp *out_rsp)
 {
     out_rsp->conn_cancel.status = ble_gap_conn_cancel();
+}
+
+void
+bhd_gap_scan(const struct bhd_req *req, struct bhd_rsp *out_rsp)
+{
+    const struct ble_gap_disc_params params = {
+        .itvl = req->scan.itvl,
+        .window = req->scan.window,
+        .filter_policy = req->scan.filter_policy,
+        .limited = req->scan.limited,
+        .passive = req->scan.passive,
+        .filter_duplicates = req->scan.filter_duplicates,
+    };
+
+    out_rsp->scan.status = ble_gap_disc(req->scan.own_addr_type,
+                                        req->scan.duration_ms,
+                                        &params,
+                                        bhd_gap_event,
+                                        bhd_seq_arg(req->hdr.seq));
+}
+
+void
+bhd_gap_scan_cancel(const struct bhd_req *req, struct bhd_rsp *out_rsp)
+{
+    out_rsp->scan_cancel.status = ble_gap_disc_cancel();
 }

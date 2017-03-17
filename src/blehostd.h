@@ -33,13 +33,6 @@ int
 bhd_kv_str_int_find(const struct bhd_kv_str_int *map, const char *key);
 const char *bhd_kv_str_int_rev_find(const struct bhd_kv_str_int *map, int val);
 
-int bhd_op_parse(const char *op_str);
-const char *bhd_op_rev_parse(int op);
-int bhd_type_parse(const char *type_str);
-const char *bhd_type_rev_parse(int type);
-int bhd_addr_type_parse(const char *addr_type_str);
-const char *bhd_addr_type_rev_parse(int addr_type);
-
 char *bhd_hex_str(char *dst, int max_dst_len, int *out_dst_len,
                   const uint8_t *src, int src_len);
 char *bhd_addr_str(char *dst, const uint8_t *addr);

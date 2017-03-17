@@ -26,9 +26,11 @@ static bhd_req_handle_fn bhd_disc_chr_uuid_req_handle;
 static bhd_req_handle_fn bhd_write_req_handle;
 static bhd_req_handle_fn bhd_write_cmd_req_handle;
 static bhd_req_handle_fn bhd_exchange_mtu_req_handle;
-static bhd_req_handle_fn bhd_gen_rand_addr_handle;
-static bhd_req_handle_fn bhd_set_rand_addr_handle;
-static bhd_req_handle_fn bhd_conn_cancel_handle;
+static bhd_req_handle_fn bhd_gen_rand_addr_req_handle;
+static bhd_req_handle_fn bhd_set_rand_addr_req_handle;
+static bhd_req_handle_fn bhd_conn_cancel_req_handle;
+static bhd_req_handle_fn bhd_scan_req_handle;
+static bhd_req_handle_fn bhd_scan_cancel_req_handle;
 
 static const struct bhd_req_dispatch_entry {
     int req_type;
@@ -44,9 +46,11 @@ static const struct bhd_req_dispatch_entry {
     { BHD_MSG_TYPE_WRITE, bhd_write_req_handle },
     { BHD_MSG_TYPE_WRITE_CMD, bhd_write_cmd_req_handle },
     { BHD_MSG_TYPE_EXCHANGE_MTU, bhd_exchange_mtu_req_handle },
-    { BHD_MSG_TYPE_GEN_RAND_ADDR, bhd_gen_rand_addr_handle },
-    { BHD_MSG_TYPE_SET_RAND_ADDR, bhd_set_rand_addr_handle },
-    { BHD_MSG_TYPE_CONN_CANCEL, bhd_conn_cancel_handle },
+    { BHD_MSG_TYPE_GEN_RAND_ADDR, bhd_gen_rand_addr_req_handle },
+    { BHD_MSG_TYPE_SET_RAND_ADDR, bhd_set_rand_addr_req_handle },
+    { BHD_MSG_TYPE_CONN_CANCEL, bhd_conn_cancel_req_handle },
+    { BHD_MSG_TYPE_SCAN, bhd_scan_req_handle },
+    { BHD_MSG_TYPE_SCAN_CANCEL, bhd_scan_cancel_req_handle },
 
     { -1 },
 };
@@ -65,6 +69,8 @@ static bhd_subrsp_enc_fn bhd_exchange_mtu_rsp_enc;
 static bhd_subrsp_enc_fn bhd_gen_rand_addr_rsp_enc;
 static bhd_subrsp_enc_fn bhd_set_rand_addr_rsp_enc;
 static bhd_subrsp_enc_fn bhd_conn_cancel_rsp_enc;
+static bhd_subrsp_enc_fn bhd_scan_rsp_enc;
+static bhd_subrsp_enc_fn bhd_scan_cancel_rsp_enc;
 
 static const struct bhd_rsp_dispatch_entry {
     int rsp_type;
@@ -84,6 +90,8 @@ static const struct bhd_rsp_dispatch_entry {
     { BHD_MSG_TYPE_GEN_RAND_ADDR, bhd_gen_rand_addr_rsp_enc },
     { BHD_MSG_TYPE_SET_RAND_ADDR, bhd_set_rand_addr_rsp_enc },
     { BHD_MSG_TYPE_CONN_CANCEL, bhd_conn_cancel_rsp_enc },
+    { BHD_MSG_TYPE_SCAN, bhd_scan_rsp_enc },
+    { BHD_MSG_TYPE_SCAN_CANCEL, bhd_scan_cancel_rsp_enc },
 
     { -1 },
 };
@@ -97,6 +105,7 @@ static bhd_evt_enc_fn bhd_disc_chr_evt_enc;
 static bhd_evt_enc_fn bhd_write_ack_evt_enc;
 static bhd_evt_enc_fn bhd_notify_rx_evt_enc;
 static bhd_evt_enc_fn bhd_mtu_change_evt_enc;
+static bhd_evt_enc_fn bhd_scan_evt_enc;
 
 static const struct bhd_evt_dispatch_entry {
     int msg_type;
@@ -110,6 +119,7 @@ static const struct bhd_evt_dispatch_entry {
     { BHD_MSG_TYPE_WRITE_ACK_EVT,   bhd_write_ack_evt_enc },
     { BHD_MSG_TYPE_NOTIFY_RX_EVT,   bhd_notify_rx_evt_enc },
     { BHD_MSG_TYPE_MTU_CHANGE_EVT,  bhd_mtu_change_evt_enc },
+    { BHD_MSG_TYPE_SCAN_EVT,        bhd_scan_evt_enc },
 
     { -1 },
 };
@@ -580,8 +590,8 @@ bhd_exchange_mtu_req_handle(cJSON *parent, struct bhd_req *req,
  *                              0 for no response.
  */
 static int
-bhd_gen_rand_addr_handle(cJSON *parent, struct bhd_req *req,
-                         struct bhd_rsp *rsp)
+bhd_gen_rand_addr_req_handle(cJSON *parent, struct bhd_req *req,
+                             struct bhd_rsp *rsp)
 {
     int rc;
 
@@ -600,8 +610,8 @@ bhd_gen_rand_addr_handle(cJSON *parent, struct bhd_req *req,
  *                              0 for no response.
  */
 static int
-bhd_set_rand_addr_handle(cJSON *parent, struct bhd_req *req,
-                         struct bhd_rsp *rsp)
+bhd_set_rand_addr_req_handle(cJSON *parent, struct bhd_req *req,
+                             struct bhd_rsp *rsp)
 {
     int rc;
 
@@ -615,10 +625,83 @@ bhd_set_rand_addr_handle(cJSON *parent, struct bhd_req *req,
 }
 
 static int
-bhd_conn_cancel_handle(cJSON *parent, struct bhd_req *req,
-                          struct bhd_rsp *rsp)
+bhd_conn_cancel_req_handle(cJSON *parent, struct bhd_req *req,
+                           struct bhd_rsp *rsp)
 {
     bhd_gap_conn_cancel(req, rsp);
+    return 1;
+}
+
+static int
+bhd_scan_req_handle(cJSON *parent, struct bhd_req *req, struct bhd_rsp *rsp)
+{
+    int rc;
+
+    req->scan.own_addr_type =
+        bhd_json_addr_type(parent, "own_addr_type", &rc);
+    if (rc != 0) {
+        bhd_err_build(rsp, rc, "invalid own_addr_type");
+        return 1;
+    }
+
+    req->scan.duration_ms =
+        bhd_json_int_bounds(parent, "duration_ms", 0, INT32_MAX, &rc);
+    if (rc != 0) {
+        bhd_err_build(rsp, rc, "invalid duration_ms");
+        return 1;
+    }
+
+    req->scan.itvl =
+        bhd_json_int_bounds(parent, "itvl", 0, UINT16_MAX, &rc);
+    if (rc != 0) {
+        bhd_err_build(rsp, rc, "invalid itvl");
+        return 1;
+    }
+
+    req->scan.window =
+        bhd_json_int_bounds(parent, "window", 0, UINT16_MAX, &rc);
+    if (rc != 0) {
+        bhd_err_build(rsp, rc, "invalid window");
+        return 1;
+    }
+
+    req->scan.filter_policy =
+        bhd_json_scan_filter_policy(parent, "filter_policy", &rc);
+    if (rc != 0) {
+        bhd_err_build(rsp, rc, "invalid filter_policy");
+        return 1;
+    }
+
+    req->scan.limited =
+        bhd_json_bool(parent, "limited", &rc);
+    if (rc != 0) {
+        bhd_err_build(rsp, rc, "invalid limited");
+        return 1;
+    }
+
+    req->scan.passive =
+        bhd_json_bool(parent, "passive", &rc);
+    if (rc != 0) {
+        bhd_err_build(rsp, rc, "invalid passive");
+        return 1;
+    }
+
+    req->scan.filter_duplicates =
+        bhd_json_bool(parent, "filter_duplicates", &rc);
+    if (rc != 0) {
+        bhd_err_build(rsp, rc, "invalid filter_duplicates");
+        return 1;
+    }
+
+    bhd_gap_scan(req, rsp);
+    return 1;
+}
+
+static int
+bhd_scan_cancel_req_handle(cJSON *parent,
+                           struct bhd_req *req, struct bhd_rsp *rsp)
+{
+    bhd_gap_scan_cancel(req, rsp);
     return 1;
 }
 
@@ -795,6 +878,20 @@ static int
 bhd_conn_cancel_rsp_enc(cJSON *parent, const struct bhd_rsp *rsp)
 {
     bhd_json_add_int(parent, "status", rsp->conn_cancel.status);
+    return 0;
+}
+
+static int
+bhd_scan_rsp_enc(cJSON *parent, const struct bhd_rsp *rsp)
+{
+    bhd_json_add_int(parent, "status", rsp->scan.status);
+    return 0;
+}
+
+static int
+bhd_scan_cancel_rsp_enc(cJSON *parent, const struct bhd_rsp *rsp)
+{
+    bhd_json_add_int(parent, "status", rsp->scan_cancel.status);
     return 0;
 }
 
@@ -995,6 +1092,34 @@ bhd_mtu_change_evt_enc(cJSON *parent, const struct bhd_evt *evt)
     bhd_json_add_int(parent, "conn_handle", evt->mtu_change.conn_handle);
     bhd_json_add_int(parent, "mtu", evt->mtu_change.mtu);
     bhd_json_add_int(parent, "status", evt->mtu_change.status);
+    return 0;
+}
+
+static int
+bhd_scan_evt_enc(cJSON *parent, const struct bhd_evt *evt)
+{
+    bhd_json_add_adv_event_type(parent, "event_type", evt->scan.event_type);
+    bhd_json_add_addr_type(parent, "addr_type", evt->scan.addr.type);
+    bhd_json_add_addr(parent, "addr", evt->scan.addr.val);
+    bhd_json_add_int(parent, "rssi", evt->scan.rssi);
+    bhd_json_add_bytes(parent, "data", evt->scan.data, evt->scan.length_data);
+
+    if (ble_addr_cmp(&evt->scan.direct_addr, BLE_ADDR_ANY) != 0) {
+        bhd_json_add_addr_type(parent, "direct_addr_type",
+                               evt->scan.direct_addr.type);
+        bhd_json_add_addr(parent, "direct_addr", evt->scan.direct_addr.val);
+    }
+
+    if (evt->scan.data_flags != 0) {
+        bhd_json_add_int(parent, "data_flags", evt->scan.data_flags);
+    }
+    if (evt->scan.data_name != NULL) {
+        cJSON_AddStringToObject(parent, "data_name",
+                                (const char *)evt->scan.data_name);
+        bhd_json_add_bool(parent, "data_name_is_complete",
+                          evt->scan.data_name_is_complete);
+    }
+
     return 0;
 }
 

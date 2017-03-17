@@ -5,6 +5,7 @@
 #include "bhd_proto.h"
 #include "defs/error.h"
 #include "nimble/ble.h"
+#include "nimble/hci_common.h"
 #include "host/ble_hs.h"
 
 static const struct bhd_kv_str_int bhd_op_map[] = {
@@ -27,6 +28,8 @@ static const struct bhd_kv_str_int bhd_type_map[] = {
     { "write_cmd",      BHD_MSG_TYPE_WRITE_CMD },
     { "exchange_mtu",   BHD_MSG_TYPE_EXCHANGE_MTU },
     { "conn_cancel",    BHD_MSG_TYPE_CONN_CANCEL },
+    { "scan",           BHD_MSG_TYPE_SCAN },
+    { "scan_cancel",    BHD_MSG_TYPE_SCAN_CANCEL },
 
     { "sync_evt",       BHD_MSG_TYPE_SYNC_EVT },
     { "connect_evt",    BHD_MSG_TYPE_CONNECT_EVT },
@@ -36,6 +39,7 @@ static const struct bhd_kv_str_int bhd_type_map[] = {
     { "write_ack_evt",  BHD_MSG_TYPE_WRITE_ACK_EVT },
     { "notify_rx_evt",  BHD_MSG_TYPE_NOTIFY_RX_EVT },
     { "mtu_change_evt", BHD_MSG_TYPE_MTU_CHANGE_EVT },
+    { "scan_evt",       BHD_MSG_TYPE_SCAN_EVT },
 
     { 0 },
 };
@@ -45,6 +49,23 @@ static const struct bhd_kv_str_int bhd_addr_type_map[] = {
     { "random",         BLE_ADDR_RANDOM },
     { "rpa_pub",        BLE_ADDR_PUBLIC_ID },
     { "rpa_rnd",        BLE_ADDR_RANDOM_ID },
+    { 0 },
+};
+
+static const struct bhd_kv_str_int bhd_scan_filter_policy_map[] = {
+    { "no_wl",          BLE_HCI_SCAN_FILT_NO_WL },
+    { "use_wl",         BLE_HCI_SCAN_FILT_USE_WL },
+    { "no_wl_inita",    BLE_HCI_SCAN_FILT_NO_WL_INITA },
+    { "use_wl_inita",   BLE_HCI_SCAN_FILT_USE_WL_INITA },
+    { 0 },
+};
+
+static const struct bhd_kv_str_int bhd_adv_event_type_map[] = {
+    { "ind",            BLE_HCI_ADV_TYPE_ADV_IND },
+    { "direct_ind_hd",  BLE_HCI_ADV_TYPE_ADV_DIRECT_IND_HD },
+    { "scan_ind",       BLE_HCI_ADV_TYPE_ADV_SCAN_IND },
+    { "nonconn_ind",    BLE_HCI_ADV_TYPE_ADV_NONCONN_IND },
+    { "direct_ind_ld",  BLE_HCI_ADV_TYPE_ADV_DIRECT_IND_LD },
     { 0 },
 };
 
@@ -143,6 +164,30 @@ const char *
 bhd_addr_type_rev_parse(int addr_type)
 {
     return bhd_kv_str_int_rev_find(bhd_addr_type_map, addr_type);
+}
+
+int
+bhd_scan_filter_policy_parse(const char *filter_policy_str)
+{
+    return bhd_kv_str_int_find(bhd_scan_filter_policy_map, filter_policy_str);
+}
+
+const char *
+bhd_scan_filter_policy_rev_parse(int filter_policy)
+{
+    return bhd_kv_str_int_rev_find(bhd_scan_filter_policy_map, filter_policy);
+}
+
+int
+bhd_adv_event_type_parse(const char *adv_event_type_str)
+{
+    return bhd_kv_str_int_find(bhd_adv_event_type_map, adv_event_type_str);
+}
+
+const char *
+bhd_adv_event_type_rev_parse(int adv_event_type)
+{
+    return bhd_kv_str_int_rev_find(bhd_adv_event_type_map, adv_event_type);
 }
 
 long long int
@@ -275,6 +320,32 @@ bhd_json_addr_type(const cJSON *parent, const char *name, int *rc)
     }
 }
 
+int
+bhd_json_scan_filter_policy(const cJSON *parent, const char *name, int *rc)
+{
+    uint8_t filter_policy;
+    char *valstr;
+
+    valstr = bhd_json_string(parent, name, rc);
+    switch (*rc) {
+    case 0:
+        filter_policy = bhd_scan_filter_policy_parse(valstr);
+        if (filter_policy == -1) {
+            *rc = SYS_ERANGE;
+        } else {
+            *rc = 0;
+        }
+        return filter_policy;
+
+    case SYS_ENOENT:
+        *rc = SYS_ERANGE;
+        return -1;
+
+    default:
+        return -1;
+    }
+}
+
 uint8_t *
 bhd_json_addr(const cJSON *parent, const char *name, uint8_t *dst, int *rc)
 {
@@ -366,6 +437,24 @@ bhd_json_uuid(const cJSON *parent, const char *name, ble_uuid_any_t *dst,
 }
 
 void
+bhd_json_add_bytes(cJSON *parent, const char *name, const uint8_t *data,
+                   int len)
+{
+    char *buf;
+    int max_len;
+
+    max_len = len * 5; /* 0xXX: */
+
+    buf = malloc(max_len);
+    assert(buf != NULL);
+
+    cJSON_AddStringToObject(parent, name,
+                            bhd_hex_str(buf, max_len, NULL, data, len));
+
+    free(buf);
+}
+
+void
 bhd_json_add_uuid(cJSON *parent, const char *name, const ble_uuid_t *uuid)
 {
     char valstr[BLE_UUID_STR_LEN];
@@ -412,6 +501,21 @@ bhd_json_add_addr_type(cJSON *parent, const char *name, uint8_t addr_type)
     return 0;
 }
 
+int
+bhd_json_add_adv_event_type(cJSON *parent, const char *name,
+                            uint8_t adv_event_type)
+{
+    const char *valstr;
+
+    valstr = bhd_adv_event_type_rev_parse(adv_event_type);
+    if (valstr == NULL) {
+        return SYS_EINVAL;
+    }
+
+    cJSON_AddStringToObject(parent, name, valstr);
+    return 0;
+}
+
 char *
 bhd_hex_str(char *dst, int max_dst_len, int *out_dst_len, const uint8_t *src,
             int src_len)
@@ -445,7 +549,7 @@ char *
 bhd_addr_str(char *dst, const uint8_t *addr)
 {
     sprintf(dst, "%02x:%02x:%02x:%02x:%02x:%02x",
-            addr[0], addr[1], addr[2], addr[3], addr[4], addr[5]);
+            addr[5], addr[4], addr[3], addr[2], addr[1], addr[0]);
     return dst;
 }
 
