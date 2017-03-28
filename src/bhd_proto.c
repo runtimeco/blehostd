@@ -1098,6 +1098,8 @@ bhd_mtu_change_evt_enc(cJSON *parent, const struct bhd_evt *evt)
 static int
 bhd_scan_evt_enc(cJSON *parent, const struct bhd_evt *evt)
 {
+    char str[BLE_HS_ADV_MAX_FIELD_SZ + 1];
+
     bhd_json_add_adv_event_type(parent, "event_type", evt->scan.event_type);
     bhd_json_add_addr_type(parent, "addr_type", evt->scan.addr.type);
     bhd_json_add_addr(parent, "addr", evt->scan.addr.val);
@@ -1113,11 +1115,101 @@ bhd_scan_evt_enc(cJSON *parent, const struct bhd_evt *evt)
     if (evt->scan.data_flags != 0) {
         bhd_json_add_int(parent, "data_flags", evt->scan.data_flags);
     }
-    if (evt->scan.data_name != NULL) {
-        cJSON_AddStringToObject(parent, "data_name",
-                                (const char *)evt->scan.data_name);
+
+    if (evt->scan.data_num_uuids16 != 0) {
+        bhd_json_add_gen_arr(parent,
+                             "data_uuids16", 
+                             evt->scan.data_uuids16,
+                             evt->scan.data_num_uuids16,
+                             cJSON_CreateNumber);
+        bhd_json_add_bool(parent, "data_uuids16_is_complete",
+                          evt->scan.data_uuids16_is_complete);
+    }
+
+    if (evt->scan.data_num_uuids32 != 0) {
+        bhd_json_add_gen_arr(parent,
+                             "data_uuids32", 
+                             evt->scan.data_uuids32,
+                             evt->scan.data_num_uuids32,
+                             cJSON_CreateNumber);
+        bhd_json_add_bool(parent, "data_uuids32_is_complete",
+                          evt->scan.data_uuids32_is_complete);
+    }
+
+    if (evt->scan.data_num_uuids128 != 0) {
+        bhd_json_add_gen_arr(parent,
+                             "data_uuids128", 
+                             evt->scan.data_uuids128,
+                             evt->scan.data_num_uuids128,
+                             bhd_json_create_uuid128_bytes);
+        bhd_json_add_bool(parent, "data_uuids128_is_complete",
+                          evt->scan.data_uuids128_is_complete);
+    }
+
+    if (evt->scan.data_name_len != 0) {
+        memcpy(str, evt->scan.data_name, evt->scan.data_name_len);
+        str[evt->scan.data_name_len] = '\0';
+        cJSON_AddStringToObject(parent, "data_name", str);
+
         bhd_json_add_bool(parent, "data_name_is_complete",
                           evt->scan.data_name_is_complete);
+    }
+
+    if (evt->scan.data_tx_pwr_lvl_is_present) {
+        bhd_json_add_int(parent, "data_tx_pwr_lvl", evt->scan.data_tx_pwr_lvl);
+    }
+
+    if (evt->scan.data_slave_itvl_range_is_present) {
+        bhd_json_add_int(parent, "data_slave_itvl_min",
+                         evt->scan.data_slave_itvl_min);
+        bhd_json_add_int(parent, "data_slave_itvl_max",
+                         evt->scan.data_slave_itvl_max);
+    }
+
+    if (evt->scan.data_svc_data_uuid16_len != 0) {
+        bhd_json_add_bytes(parent, "data_svc_data_uuid16",
+                           evt->scan.data_svc_data_uuid16,
+                           evt->scan.data_svc_data_uuid16_len);
+    }
+
+    if (evt->scan.data_num_public_tgt_addrs != 0) {
+        bhd_json_add_gen_arr(parent,
+                             "data_public_tgt_addrs", 
+                             evt->scan.data_public_tgt_addrs,
+                             evt->scan.data_num_public_tgt_addrs,
+                             bhd_json_create_addr);
+    }
+
+    if (evt->scan.data_appearance_is_present) {
+        bhd_json_add_int(parent, "data_appearance", evt->scan.data_appearance);
+    }
+
+    if (evt->scan.data_adv_itvl_is_present) {
+        bhd_json_add_int(parent, "data_adv_itvl", evt->scan.data_adv_itvl);
+    }
+
+    if (evt->scan.data_svc_data_uuid32_len != 0) {
+        bhd_json_add_bytes(parent, "data_svc_data_uuid32",
+                           evt->scan.data_svc_data_uuid32,
+                           evt->scan.data_svc_data_uuid32_len);
+    }
+
+    if (evt->scan.data_svc_data_uuid128_len != 0) {
+        bhd_json_add_bytes(parent, "data_svc_data_uuid128",
+                           evt->scan.data_svc_data_uuid128,
+                           evt->scan.data_svc_data_uuid128_len);
+    }
+
+    if (evt->scan.data_uri_len != 0) {
+        memcpy(str, evt->scan.data_uri, evt->scan.data_uri_len);
+        str[evt->scan.data_uri_len] = '\0';
+        cJSON_AddStringToObject(parent, "data_uri", str);
+    }
+
+    if (evt->scan.data_mfg_data_len != 0) {
+        bhd_json_add_bytes(parent, "data_mfg_data",
+                           evt->scan.data_mfg_data,
+                           evt->scan.data_mfg_data_len);
     }
 
     return 0;

@@ -305,17 +305,17 @@ struct bhd_scan_evt {
     uint8_t data_flags;
 
     /*** 0x02,0x03 - 16-bit service class UUIDs. */
-    ble_uuid16_t *data_uuids16;
+    uint16_t data_uuids16[BLE_HS_ADV_MAX_FIELD_SZ / 2];
     uint8_t data_num_uuids16;
     unsigned data_uuids16_is_complete:1;
 
     /*** 0x04,0x05 - 32-bit service class UUIDs. */
-    ble_uuid32_t *data_uuids32;
+    uint32_t data_uuids32[BLE_HS_ADV_MAX_FIELD_SZ / 4];
     uint8_t data_num_uuids32;
     unsigned data_uuids32_is_complete:1;
 
     /*** 0x06,0x07 - 128-bit service class UUIDs. */
-    ble_uuid128_t *data_uuids128;
+    uint8_t data_uuids128[BLE_HS_ADV_MAX_FIELD_SZ / 16][16];
     uint8_t data_num_uuids128;
     unsigned data_uuids128_is_complete:1;
 
@@ -329,14 +329,16 @@ struct bhd_scan_evt {
     unsigned data_tx_pwr_lvl_is_present:1;
 
     /*** 0x0d - Slave connection interval range. */
-    uint8_t *data_slave_itvl_range;
+    uint16_t data_slave_itvl_min;
+    uint16_t data_slave_itvl_max;
+    unsigned data_slave_itvl_range_is_present;
 
     /*** 0x16 - Service data - 16-bit UUID. */
-    uint8_t *data_svc_data_uuid16;
+    uint8_t data_svc_data_uuid16[BLE_HS_ADV_MAX_FIELD_SZ];
     uint8_t data_svc_data_uuid16_len;
 
     /*** 0x17 - Public target address. */
-    uint8_t *data_public_tgt_addr;
+    uint8_t data_public_tgt_addrs[BLE_HS_ADV_MAX_FIELD_SZ / 6][6];
     uint8_t data_num_public_tgt_addrs;
 
     /*** 0x19 - Appearance. */
@@ -348,19 +350,19 @@ struct bhd_scan_evt {
     unsigned data_adv_itvl_is_present:1;
 
     /*** 0x20 - Service data - 32-bit UUID. */
-    uint8_t *data_svc_data_uuid32;
+    uint8_t data_svc_data_uuid32[BLE_HS_ADV_MAX_FIELD_SZ];
     uint8_t data_svc_data_uuid32_len;
 
     /*** 0x21 - Service data - 128-bit UUID. */
-    uint8_t *data_svc_data_uuid128;
+    uint8_t data_svc_data_uuid128[BLE_HS_ADV_MAX_FIELD_SZ];
     uint8_t data_svc_data_uuid128_len;
 
     /*** 0x24 - URI. */
-    uint8_t *data_uri;
+    uint8_t data_uri[BLE_HS_ADV_MAX_FIELD_SZ];
     uint8_t data_uri_len;
 
     /*** 0xff - Manufacturer specific data. */
-    uint8_t *data_mfg_data;
+    uint8_t data_mfg_data[BLE_HS_ADV_MAX_FIELD_SZ];
     uint8_t data_mfg_data_len;
 
 };

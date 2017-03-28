@@ -116,6 +116,7 @@ bhd_gap_send_scan_evt(bhd_seq_t seq, const struct ble_gap_disc_desc *desc)
     struct bhd_evt evt = {{0}};
     struct ble_hs_adv_fields fields;
     int rc;
+    int i;
 
     evt.hdr.op = BHD_MSG_OP_EVT;
     evt.hdr.type = BHD_MSG_TYPE_SCAN_EVT;
@@ -131,10 +132,83 @@ bhd_gap_send_scan_evt(bhd_seq_t seq, const struct ble_gap_disc_desc *desc)
     rc = ble_hs_adv_parse_fields(&fields, evt.scan.data, evt.scan.length_data);
     if (rc == 0) {
         evt.scan.data_flags = fields.flags;
+
+        for (i = 0; i < fields.num_uuids16; i++) {
+            evt.scan.data_uuids16[i] = fields.uuids16[i].value;
+        }
+        evt.scan.data_uuids16_is_complete = fields.uuids16_is_complete;
+
+        for (i = 0; i < fields.num_uuids32; i++) {
+            evt.scan.data_uuids32[i] = fields.uuids32[i].value;
+        }
+        evt.scan.data_uuids32_is_complete = fields.uuids32_is_complete;
+
+        for (i = 0; i < fields.num_uuids128; i++) {
+            memcpy(evt.scan.data_uuids128[i], fields.uuids128[i].value, 16);
+        }
+        evt.scan.data_uuids128_is_complete = fields.uuids128_is_complete;
+
         if (fields.name != NULL) {
             memcpy(evt.scan.data_name, fields.name, fields.name_len);
             evt.scan.data_name_len = fields.name_len;
             evt.scan.data_name_is_complete = fields.name_is_complete;
+        }
+
+        evt.scan.data_tx_pwr_lvl = fields.tx_pwr_lvl;
+        evt.scan.data_tx_pwr_lvl_is_present = fields.tx_pwr_lvl_is_present;
+
+        if (fields.slave_itvl_range != NULL) {
+            evt.scan.data_slave_itvl_min =
+                get_be16(fields.slave_itvl_range + 0);
+            evt.scan.data_slave_itvl_max =
+                get_be16(fields.slave_itvl_range + 2);
+            evt.scan.data_slave_itvl_range_is_present = 1;
+        }
+
+        if (fields.svc_data_uuid16 != NULL) {
+            memcpy(evt.scan.data_svc_data_uuid16,
+                   fields.svc_data_uuid16,
+                   fields.svc_data_uuid16_len);
+            evt.scan.data_svc_data_uuid16_len = fields.svc_data_uuid16_len;
+        }
+
+        for (i = 0; i < fields.num_public_tgt_addrs; i++) {
+            memcpy(evt.scan.data_public_tgt_addrs[i],
+                   fields.public_tgt_addr + i * 6,
+                   6);
+        }
+        evt.scan.data_num_public_tgt_addrs = fields.num_public_tgt_addrs;
+
+        evt.scan.data_appearance = fields.appearance;
+        evt.scan.data_appearance_is_present = fields.appearance_is_present;
+
+        evt.scan.data_adv_itvl = fields.adv_itvl;
+        evt.scan.data_adv_itvl_is_present = fields.adv_itvl_is_present;
+
+        if (fields.svc_data_uuid32 != NULL) {
+            memcpy(evt.scan.data_svc_data_uuid32,
+                   fields.svc_data_uuid32,
+                   fields.svc_data_uuid32_len);
+            evt.scan.data_svc_data_uuid32_len = fields.svc_data_uuid32_len;
+        }
+
+        if (fields.svc_data_uuid128 != NULL) {
+            memcpy(evt.scan.data_svc_data_uuid128,
+                   fields.svc_data_uuid128,
+                   fields.svc_data_uuid128_len);
+            evt.scan.data_svc_data_uuid128_len = fields.svc_data_uuid128_len;
+        }
+
+        if (fields.uri != NULL) {
+            memcpy(evt.scan.data_uri, fields.uri, fields.uri_len);
+            evt.scan.data_uri_len = fields.uri_len;
+        }
+
+        if (fields.mfg_data != NULL) {
+            memcpy(evt.scan.data_mfg_data,
+                   fields.mfg_data,
+                   fields.mfg_data_len);
+            evt.scan.data_mfg_data_len = fields.mfg_data_len;
         }
     }
 

@@ -436,10 +436,10 @@ bhd_json_uuid(const cJSON *parent, const char *name, ble_uuid_any_t *dst,
     return &dst->u;
 }
 
-void
-bhd_json_add_bytes(cJSON *parent, const char *name, const uint8_t *data,
-                   int len)
+cJSON *
+bhd_json_create_byte_string(const uint8_t *data, int len)
 {
+    cJSON *item;
     char *buf;
     int max_len;
 
@@ -448,26 +448,76 @@ bhd_json_add_bytes(cJSON *parent, const char *name, const uint8_t *data,
     buf = malloc(max_len);
     assert(buf != NULL);
 
-    cJSON_AddStringToObject(parent, name,
-                            bhd_hex_str(buf, max_len, NULL, data, len));
+    bhd_hex_str(buf, max_len, NULL, data, len);
+    item = cJSON_CreateString(buf);
 
     free(buf);
+    return item;
+}
+
+void
+bhd_json_add_bytes(cJSON *parent, const char *name, const uint8_t *data,
+                   int len)
+{
+    cJSON *item;
+
+    item = bhd_json_create_byte_string(data, len);
+    cJSON_AddItemToObject(parent, name, item);
+}
+
+cJSON *
+bhd_json_create_uuid(const ble_uuid_t *uuid)
+{
+    char valstr[BLE_UUID_STR_LEN];
+
+    switch (uuid->type) {
+    case BLE_UUID_TYPE_16:
+        return cJSON_CreateNumber(BLE_UUID16(uuid)->value);
+    case BLE_UUID_TYPE_32:
+        return cJSON_CreateNumber(BLE_UUID32(uuid)->value);
+    case BLE_UUID_TYPE_128:
+        return cJSON_CreateString(ble_uuid_to_str(uuid, valstr));
+    default:
+        assert(0);
+        return NULL;
+    }
+}
+
+cJSON *
+bhd_json_create_uuid128_bytes(const uint8_t uuid128_bytes[16])
+{
+    ble_uuid128_t uuid128;
+
+    uuid128.u.type = BLE_UUID_TYPE_128;
+    memcpy(uuid128.value, uuid128_bytes, sizeof uuid128.value);
+
+    return bhd_json_create_uuid(&uuid128.u);
 }
 
 void
 bhd_json_add_uuid(cJSON *parent, const char *name, const ble_uuid_t *uuid)
 {
-    char valstr[BLE_UUID_STR_LEN];
+    cJSON *item;
 
-    cJSON_AddStringToObject(parent, name, ble_uuid_to_str(uuid, valstr));
+    item = bhd_json_create_uuid(uuid);
+    cJSON_AddItemToObject(parent, name, item);
+}
+
+cJSON *
+bhd_json_create_addr(const uint8_t *addr)
+{
+    char valstr[18];
+
+    return cJSON_CreateString(bhd_addr_str(valstr, addr));
 }
 
 int
 bhd_json_add_addr(cJSON *parent, const char *name, const uint8_t *addr)
 {
-    char valstr[18];
+    cJSON *item;
 
-    cJSON_AddStringToObject(parent, name, bhd_addr_str(valstr, addr));
+    item = bhd_json_create_addr(addr);
+    cJSON_AddItemToObject(parent, name, item);
     return 0;
 }
 
@@ -480,6 +530,7 @@ bhd_json_add_int(cJSON *parent, const char *name, int64_t val)
 {
     cJSON_AddItemToObject(parent, name, cJSON_CreateNumber(val));
 }
+
 
 void
 bhd_json_add_bool(cJSON *parent, const char *name, int val)
