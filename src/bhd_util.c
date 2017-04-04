@@ -629,15 +629,15 @@ malloc_success(size_t num_bytes)
 uint32_t
 bhd_next_evt_seq(void)
 {
-    static uint32_t next_seq = BHD_EVT_SEQ_MIN;
+    static bhd_seq_t next_seq = BHD_SEQ_EVT_MIN;
 
     uint32_t seq;
     os_sr_t sr;
 
     OS_ENTER_CRITICAL(sr);
     seq = next_seq++;
-    if (next_seq < BHD_EVT_SEQ_MIN) {
-        next_seq = BHD_EVT_SEQ_MIN;
+    if (next_seq > BHD_SEQ_MAX) {
+        next_seq = BHD_SEQ_EVT_MIN;
     }
     OS_EXIT_CRITICAL(sr);
 

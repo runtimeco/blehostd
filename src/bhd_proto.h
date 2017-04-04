@@ -40,9 +40,8 @@
 
 typedef uint32_t bhd_seq_t;
 #define BHD_SEQ_MIN                         0
-#define BHD_SEQ_MAX                         UINT32_MAX
-
-#define BHD_EVT_SEQ_MIN                     0xffffff00
+#define BHD_SEQ_EVT_MIN                     0xffffff00
+#define BHD_SEQ_MAX                         0xfffffff0
 
 struct bhd_msg_hdr {
     int op;
