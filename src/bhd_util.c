@@ -27,6 +27,8 @@ static const struct bhd_kv_str_int bhd_type_map[] = {
     { "write",              BHD_MSG_TYPE_WRITE },
     { "write_cmd",          BHD_MSG_TYPE_WRITE_CMD },
     { "exchange_mtu",       BHD_MSG_TYPE_EXCHANGE_MTU },
+    { "gen_rand_addr",      BHD_MSG_TYPE_GEN_RAND_ADDR },
+    { "set_rand_addr",      BHD_MSG_TYPE_SET_RAND_ADDR },
     { "conn_cancel",        BHD_MSG_TYPE_CONN_CANCEL },
     { "scan",               BHD_MSG_TYPE_SCAN },
     { "scan_cancel",        BHD_MSG_TYPE_SCAN_CANCEL },

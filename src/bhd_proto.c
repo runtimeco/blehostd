@@ -703,7 +703,7 @@ bhd_scan_req_run(cJSON *parent, struct bhd_req *req, struct bhd_rsp *rsp)
 
 static int
 bhd_scan_cancel_req_run(cJSON *parent,
-                           struct bhd_req *req, struct bhd_rsp *rsp)
+                        struct bhd_req *req, struct bhd_rsp *rsp)
 {
     bhd_gap_scan_cancel(req, rsp);
     return 1;
@@ -711,8 +711,16 @@ bhd_scan_cancel_req_run(cJSON *parent,
 
 static int
 bhd_set_preferred_mtu_req_run(cJSON *parent,
-                                 struct bhd_req *req, struct bhd_rsp *rsp)
+                              struct bhd_req *req, struct bhd_rsp *rsp)
 {
+    int rc;
+
+    req->set_preferred_mtu.mtu =
+        bhd_json_int_bounds(parent, "mtu", 0, UINT16_MAX, &rc);
+    if (rc != 0) {
+        bhd_err_build(rsp, rc, "invalid mtu");
+        return 1;
+    }
     bhd_gattc_set_preferred_mtu(req, rsp);
     return 1;
 }

@@ -312,17 +312,7 @@ blehostd_process_req_mq(struct os_event *ev)
 static void
 blehostd_on_sync(void)
 {
-    ble_addr_t addr;
     int rc;
-
-    rc = ble_att_set_preferred_mtu(264);
-    assert(rc == 0);
-
-    rc = ble_hs_id_gen_rnd(0, &addr);
-    assert(rc == 0);
-
-    rc = ble_hs_id_set_rnd(addr.val);
-    assert(rc == 0);
 
     rc = bhd_send_sync_evt(bhd_next_evt_seq());
     assert(rc == 0);
