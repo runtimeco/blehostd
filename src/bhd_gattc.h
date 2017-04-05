@@ -14,5 +14,7 @@ void bhd_gattc_write_no_rsp(const struct bhd_req *req,
                             struct bhd_rsp *out_rsp);
 void bhd_gattc_exchange_mtu(const struct bhd_req *req,
                             struct bhd_rsp *out_rsp);
+void bhd_gattc_set_preferred_mtu(const struct bhd_req *req,
+                                 struct bhd_rsp *out_rsp);
 
 #endif

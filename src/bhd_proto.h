@@ -25,6 +25,7 @@
 #define BHD_MSG_TYPE_CONN_CANCEL            14
 #define BHD_MSG_TYPE_SCAN                   15
 #define BHD_MSG_TYPE_SCAN_CANCEL            16
+#define BHD_MSG_TYPE_SET_PREFERRED_MTU      17
 
 #define BHD_MSG_TYPE_SYNC_EVT               2049
 #define BHD_MSG_TYPE_CONNECT_EVT            2050
@@ -125,6 +126,10 @@ struct bhd_scan_req {
     uint8_t filter_duplicates:1;
 };
 
+struct bhd_set_preferred_mtu_req {
+    uint16_t mtu;
+};
+
 struct bhd_req {
     struct bhd_msg_hdr hdr;
     union {
@@ -139,6 +144,7 @@ struct bhd_req {
         struct bhd_gen_rand_addr_req gen_rand_addr;
         struct bhd_set_rand_addr_req set_rand_addr;
         struct bhd_scan_req scan;
+        struct bhd_set_preferred_mtu_req set_preferred_mtu;
     };
 };
 
@@ -206,6 +212,10 @@ struct bhd_scan_cancel_rsp {
     int status;
 };
 
+struct bhd_set_preferred_mtu_rsp {
+    int status;
+};
+
 struct bhd_rsp {
     struct bhd_msg_hdr hdr;
     union {
@@ -224,6 +234,7 @@ struct bhd_rsp {
         struct bhd_conn_cancel_rsp conn_cancel;
         struct bhd_scan_rsp scan;
         struct bhd_scan_cancel_rsp scan_cancel;
+        struct bhd_set_preferred_mtu_rsp set_preferred_mtu;
     };
 };
 

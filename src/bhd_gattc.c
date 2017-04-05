@@ -225,3 +225,12 @@ bhd_gattc_exchange_mtu(const struct bhd_req *req, struct bhd_rsp *out_rsp)
                                 bhd_seq_arg(req->hdr.seq));
     out_rsp->exchange_mtu.status = rc;
 }
+
+void
+bhd_gattc_set_preferred_mtu(const struct bhd_req *req, struct bhd_rsp *out_rsp)
+{
+    int rc;
+
+    rc = ble_att_set_preferred_mtu(req->set_preferred_mtu.mtu);
+    out_rsp->set_preferred_mtu.status = rc;
+}

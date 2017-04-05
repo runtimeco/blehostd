@@ -31,6 +31,7 @@ static bhd_req_handle_fn bhd_set_rand_addr_req_handle;
 static bhd_req_handle_fn bhd_conn_cancel_req_handle;
 static bhd_req_handle_fn bhd_scan_req_handle;
 static bhd_req_handle_fn bhd_scan_cancel_req_handle;
+static bhd_req_handle_fn bhd_set_preferred_mtu_req_handle;
 
 static const struct bhd_req_dispatch_entry {
     int req_type;
@@ -51,6 +52,7 @@ static const struct bhd_req_dispatch_entry {
     { BHD_MSG_TYPE_CONN_CANCEL, bhd_conn_cancel_req_handle },
     { BHD_MSG_TYPE_SCAN, bhd_scan_req_handle },
     { BHD_MSG_TYPE_SCAN_CANCEL, bhd_scan_cancel_req_handle },
+    { BHD_MSG_TYPE_SET_PREFERRED_MTU, bhd_set_preferred_mtu_req_handle },
 
     { -1 },
 };
@@ -71,6 +73,7 @@ static bhd_subrsp_enc_fn bhd_set_rand_addr_rsp_enc;
 static bhd_subrsp_enc_fn bhd_conn_cancel_rsp_enc;
 static bhd_subrsp_enc_fn bhd_scan_rsp_enc;
 static bhd_subrsp_enc_fn bhd_scan_cancel_rsp_enc;
+static bhd_subrsp_enc_fn bhd_set_preferred_mtu_rsp_enc;
 
 static const struct bhd_rsp_dispatch_entry {
     int rsp_type;
@@ -92,6 +95,7 @@ static const struct bhd_rsp_dispatch_entry {
     { BHD_MSG_TYPE_CONN_CANCEL, bhd_conn_cancel_rsp_enc },
     { BHD_MSG_TYPE_SCAN, bhd_scan_rsp_enc },
     { BHD_MSG_TYPE_SCAN_CANCEL, bhd_scan_cancel_rsp_enc },
+    { BHD_MSG_TYPE_SET_PREFERRED_MTU, bhd_set_preferred_mtu_rsp_enc },
 
     { -1 },
 };
@@ -705,6 +709,14 @@ bhd_scan_cancel_req_handle(cJSON *parent,
     return 1;
 }
 
+static int
+bhd_set_preferred_mtu_req_handle(cJSON *parent,
+                                 struct bhd_req *req, struct bhd_rsp *rsp)
+{
+    bhd_gattc_set_preferred_mtu(req, rsp);
+    return 1;
+}
+
 /**
  * @return                      1 if a response should be sent;
  *                              0 for no response.
@@ -892,6 +904,13 @@ static int
 bhd_scan_cancel_rsp_enc(cJSON *parent, const struct bhd_rsp *rsp)
 {
     bhd_json_add_int(parent, "status", rsp->scan_cancel.status);
+    return 0;
+}
+
+static int
+bhd_set_preferred_mtu_rsp_enc(cJSON *parent, const struct bhd_rsp *rsp)
+{
+    bhd_json_add_int(parent, "status", rsp->set_preferred_mtu.status);
     return 0;
 }
 
