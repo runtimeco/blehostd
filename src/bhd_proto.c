@@ -14,45 +14,45 @@
 #include "host/ble_hs.h"
 #include "cjson/cJSON.h"
 
-typedef int bhd_req_handle_fn(cJSON *parent, struct bhd_req *req,
+typedef int bhd_req_run_fn(cJSON *parent, struct bhd_req *req,
                               struct bhd_rsp *rsp);
-static bhd_req_handle_fn bhd_sync_req_handle;
-static bhd_req_handle_fn bhd_connect_req_handle;
-static bhd_req_handle_fn bhd_terminate_req_handle;
-static bhd_req_handle_fn bhd_disc_all_svcs_req_handle;
-static bhd_req_handle_fn bhd_disc_svc_uuid_req_handle;
-static bhd_req_handle_fn bhd_disc_all_chrs_req_handle;
-static bhd_req_handle_fn bhd_disc_chr_uuid_req_handle;
-static bhd_req_handle_fn bhd_write_req_handle;
-static bhd_req_handle_fn bhd_write_cmd_req_handle;
-static bhd_req_handle_fn bhd_exchange_mtu_req_handle;
-static bhd_req_handle_fn bhd_gen_rand_addr_req_handle;
-static bhd_req_handle_fn bhd_set_rand_addr_req_handle;
-static bhd_req_handle_fn bhd_conn_cancel_req_handle;
-static bhd_req_handle_fn bhd_scan_req_handle;
-static bhd_req_handle_fn bhd_scan_cancel_req_handle;
-static bhd_req_handle_fn bhd_set_preferred_mtu_req_handle;
+static bhd_req_run_fn bhd_sync_req_run;
+static bhd_req_run_fn bhd_connect_req_run;
+static bhd_req_run_fn bhd_terminate_req_run;
+static bhd_req_run_fn bhd_disc_all_svcs_req_run;
+static bhd_req_run_fn bhd_disc_svc_uuid_req_run;
+static bhd_req_run_fn bhd_disc_all_chrs_req_run;
+static bhd_req_run_fn bhd_disc_chr_uuid_req_run;
+static bhd_req_run_fn bhd_write_req_run;
+static bhd_req_run_fn bhd_write_cmd_req_run;
+static bhd_req_run_fn bhd_exchange_mtu_req_run;
+static bhd_req_run_fn bhd_gen_rand_addr_req_run;
+static bhd_req_run_fn bhd_set_rand_addr_req_run;
+static bhd_req_run_fn bhd_conn_cancel_req_run;
+static bhd_req_run_fn bhd_scan_req_run;
+static bhd_req_run_fn bhd_scan_cancel_req_run;
+static bhd_req_run_fn bhd_set_preferred_mtu_req_run;
 
 static const struct bhd_req_dispatch_entry {
     int req_type;
-    bhd_req_handle_fn *cb;
+    bhd_req_run_fn *cb;
 } bhd_req_dispatch[] = {
-    { BHD_MSG_TYPE_SYNC, bhd_sync_req_handle },
-    { BHD_MSG_TYPE_CONNECT, bhd_connect_req_handle },
-    { BHD_MSG_TYPE_TERMINATE, bhd_terminate_req_handle },
-    { BHD_MSG_TYPE_DISC_ALL_SVCS, bhd_disc_all_svcs_req_handle },
-    { BHD_MSG_TYPE_DISC_SVC_UUID, bhd_disc_svc_uuid_req_handle },
-    { BHD_MSG_TYPE_DISC_ALL_CHRS, bhd_disc_all_chrs_req_handle },
-    { BHD_MSG_TYPE_DISC_CHR_UUID, bhd_disc_chr_uuid_req_handle },
-    { BHD_MSG_TYPE_WRITE, bhd_write_req_handle },
-    { BHD_MSG_TYPE_WRITE_CMD, bhd_write_cmd_req_handle },
-    { BHD_MSG_TYPE_EXCHANGE_MTU, bhd_exchange_mtu_req_handle },
-    { BHD_MSG_TYPE_GEN_RAND_ADDR, bhd_gen_rand_addr_req_handle },
-    { BHD_MSG_TYPE_SET_RAND_ADDR, bhd_set_rand_addr_req_handle },
-    { BHD_MSG_TYPE_CONN_CANCEL, bhd_conn_cancel_req_handle },
-    { BHD_MSG_TYPE_SCAN, bhd_scan_req_handle },
-    { BHD_MSG_TYPE_SCAN_CANCEL, bhd_scan_cancel_req_handle },
-    { BHD_MSG_TYPE_SET_PREFERRED_MTU, bhd_set_preferred_mtu_req_handle },
+    { BHD_MSG_TYPE_SYNC,                bhd_sync_req_run },
+    { BHD_MSG_TYPE_CONNECT,             bhd_connect_req_run },
+    { BHD_MSG_TYPE_TERMINATE,           bhd_terminate_req_run },
+    { BHD_MSG_TYPE_DISC_ALL_SVCS,       bhd_disc_all_svcs_req_run },
+    { BHD_MSG_TYPE_DISC_SVC_UUID,       bhd_disc_svc_uuid_req_run },
+    { BHD_MSG_TYPE_DISC_ALL_CHRS,       bhd_disc_all_chrs_req_run },
+    { BHD_MSG_TYPE_DISC_CHR_UUID,       bhd_disc_chr_uuid_req_run },
+    { BHD_MSG_TYPE_WRITE,               bhd_write_req_run },
+    { BHD_MSG_TYPE_WRITE_CMD,           bhd_write_cmd_req_run },
+    { BHD_MSG_TYPE_EXCHANGE_MTU,        bhd_exchange_mtu_req_run },
+    { BHD_MSG_TYPE_GEN_RAND_ADDR,       bhd_gen_rand_addr_req_run },
+    { BHD_MSG_TYPE_SET_RAND_ADDR,       bhd_set_rand_addr_req_run },
+    { BHD_MSG_TYPE_CONN_CANCEL,         bhd_conn_cancel_req_run },
+    { BHD_MSG_TYPE_SCAN,                bhd_scan_req_run },
+    { BHD_MSG_TYPE_SCAN_CANCEL,         bhd_scan_cancel_req_run },
+    { BHD_MSG_TYPE_SET_PREFERRED_MTU,   bhd_set_preferred_mtu_req_run },
 
     { -1 },
 };
@@ -79,23 +79,23 @@ static const struct bhd_rsp_dispatch_entry {
     int rsp_type;
     bhd_subrsp_enc_fn *cb;
 } bhd_rsp_dispatch[] = {
-    { BHD_MSG_TYPE_ERR, bhd_err_rsp_enc },
-    { BHD_MSG_TYPE_SYNC, bhd_sync_rsp_enc },
-    { BHD_MSG_TYPE_CONNECT, bhd_connect_rsp_enc },
-    { BHD_MSG_TYPE_TERMINATE, bhd_terminate_rsp_enc },
-    { BHD_MSG_TYPE_DISC_ALL_SVCS, bhd_disc_all_svcs_rsp_enc },
-    { BHD_MSG_TYPE_DISC_SVC_UUID, bhd_disc_svc_uuid_rsp_enc },
-    { BHD_MSG_TYPE_DISC_ALL_CHRS, bhd_disc_all_chrs_rsp_enc },
-    { BHD_MSG_TYPE_DISC_CHR_UUID, bhd_disc_chr_uuid_rsp_enc },
-    { BHD_MSG_TYPE_WRITE, bhd_write_rsp_enc },
-    { BHD_MSG_TYPE_WRITE_CMD, bhd_write_rsp_enc },
-    { BHD_MSG_TYPE_EXCHANGE_MTU, bhd_exchange_mtu_rsp_enc },
-    { BHD_MSG_TYPE_GEN_RAND_ADDR, bhd_gen_rand_addr_rsp_enc },
-    { BHD_MSG_TYPE_SET_RAND_ADDR, bhd_set_rand_addr_rsp_enc },
-    { BHD_MSG_TYPE_CONN_CANCEL, bhd_conn_cancel_rsp_enc },
-    { BHD_MSG_TYPE_SCAN, bhd_scan_rsp_enc },
-    { BHD_MSG_TYPE_SCAN_CANCEL, bhd_scan_cancel_rsp_enc },
-    { BHD_MSG_TYPE_SET_PREFERRED_MTU, bhd_set_preferred_mtu_rsp_enc },
+    { BHD_MSG_TYPE_ERR,                 bhd_err_rsp_enc },
+    { BHD_MSG_TYPE_SYNC,                bhd_sync_rsp_enc },
+    { BHD_MSG_TYPE_CONNECT,             bhd_connect_rsp_enc },
+    { BHD_MSG_TYPE_TERMINATE,           bhd_terminate_rsp_enc },
+    { BHD_MSG_TYPE_DISC_ALL_SVCS,       bhd_disc_all_svcs_rsp_enc },
+    { BHD_MSG_TYPE_DISC_SVC_UUID,       bhd_disc_svc_uuid_rsp_enc },
+    { BHD_MSG_TYPE_DISC_ALL_CHRS,       bhd_disc_all_chrs_rsp_enc },
+    { BHD_MSG_TYPE_DISC_CHR_UUID,       bhd_disc_chr_uuid_rsp_enc },
+    { BHD_MSG_TYPE_WRITE,               bhd_write_rsp_enc },
+    { BHD_MSG_TYPE_WRITE_CMD,           bhd_write_rsp_enc },
+    { BHD_MSG_TYPE_EXCHANGE_MTU,        bhd_exchange_mtu_rsp_enc },
+    { BHD_MSG_TYPE_GEN_RAND_ADDR,       bhd_gen_rand_addr_rsp_enc },
+    { BHD_MSG_TYPE_SET_RAND_ADDR,       bhd_set_rand_addr_rsp_enc },
+    { BHD_MSG_TYPE_CONN_CANCEL,         bhd_conn_cancel_rsp_enc },
+    { BHD_MSG_TYPE_SCAN,                bhd_scan_rsp_enc },
+    { BHD_MSG_TYPE_SCAN_CANCEL,         bhd_scan_cancel_rsp_enc },
+    { BHD_MSG_TYPE_SET_PREFERRED_MTU,   bhd_set_preferred_mtu_rsp_enc },
 
     { -1 },
 };
@@ -115,20 +115,20 @@ static const struct bhd_evt_dispatch_entry {
     int msg_type;
     bhd_evt_enc_fn *cb;
 } bhd_evt_dispatch[] = {
-    { BHD_MSG_TYPE_SYNC_EVT,        bhd_sync_evt_enc },
-    { BHD_MSG_TYPE_CONNECT_EVT,     bhd_connect_evt_enc },
-    { BHD_MSG_TYPE_DISCONNECT_EVT,  bhd_disconnect_evt_enc },
-    { BHD_MSG_TYPE_DISC_SVC_EVT,    bhd_disc_svc_evt_enc },
-    { BHD_MSG_TYPE_DISC_CHR_EVT,    bhd_disc_chr_evt_enc },
-    { BHD_MSG_TYPE_WRITE_ACK_EVT,   bhd_write_ack_evt_enc },
-    { BHD_MSG_TYPE_NOTIFY_RX_EVT,   bhd_notify_rx_evt_enc },
-    { BHD_MSG_TYPE_MTU_CHANGE_EVT,  bhd_mtu_change_evt_enc },
-    { BHD_MSG_TYPE_SCAN_EVT,        bhd_scan_evt_enc },
+    { BHD_MSG_TYPE_SYNC_EVT,            bhd_sync_evt_enc },
+    { BHD_MSG_TYPE_CONNECT_EVT,         bhd_connect_evt_enc },
+    { BHD_MSG_TYPE_DISCONNECT_EVT,      bhd_disconnect_evt_enc },
+    { BHD_MSG_TYPE_DISC_SVC_EVT,        bhd_disc_svc_evt_enc },
+    { BHD_MSG_TYPE_DISC_CHR_EVT,        bhd_disc_chr_evt_enc },
+    { BHD_MSG_TYPE_WRITE_ACK_EVT,       bhd_write_ack_evt_enc },
+    { BHD_MSG_TYPE_NOTIFY_RX_EVT,       bhd_notify_rx_evt_enc },
+    { BHD_MSG_TYPE_MTU_CHANGE_EVT,      bhd_mtu_change_evt_enc },
+    { BHD_MSG_TYPE_SCAN_EVT,            bhd_scan_evt_enc },
 
     { -1 },
 };
 
-static bhd_req_handle_fn *
+static bhd_req_run_fn *
 bhd_req_dispatch_find(int req_type)
 {
     const struct bhd_req_dispatch_entry *entry;
@@ -243,7 +243,7 @@ bhd_msg_hdr_enc(cJSON *parent, const struct bhd_msg_hdr *hdr)
  *                              0 for no response.
  */
 static int
-bhd_sync_req_handle(cJSON *parent, struct bhd_req *req, struct bhd_rsp *rsp)
+bhd_sync_req_run(cJSON *parent, struct bhd_req *req, struct bhd_rsp *rsp)
 {
     rsp->sync.synced = ble_hs_synced();
     return 1;
@@ -254,7 +254,7 @@ bhd_sync_req_handle(cJSON *parent, struct bhd_req *req, struct bhd_rsp *rsp)
  *                              0 for no response.
  */
 static int
-bhd_connect_req_handle(cJSON *parent, struct bhd_req *req, struct bhd_rsp *rsp)
+bhd_connect_req_run(cJSON *parent, struct bhd_req *req, struct bhd_rsp *rsp)
 {
     int rc;
 
@@ -350,7 +350,7 @@ bhd_connect_req_handle(cJSON *parent, struct bhd_req *req, struct bhd_rsp *rsp)
  *                              0 for no response.
  */
 static int
-bhd_terminate_req_handle(cJSON *parent,
+bhd_terminate_req_run(cJSON *parent,
                          struct bhd_req *req, struct bhd_rsp *rsp)
 {
     int rc;
@@ -378,7 +378,7 @@ bhd_terminate_req_handle(cJSON *parent,
  *                              0 for no response.
  */
 static int
-bhd_disc_all_svcs_req_handle(cJSON *parent,
+bhd_disc_all_svcs_req_run(cJSON *parent,
                              struct bhd_req *req, struct bhd_rsp *rsp)
 {
     int rc;
@@ -399,7 +399,7 @@ bhd_disc_all_svcs_req_handle(cJSON *parent,
  *                              0 for no response.
  */
 static int
-bhd_disc_svc_uuid_req_handle(cJSON *parent,
+bhd_disc_svc_uuid_req_run(cJSON *parent,
                              struct bhd_req *req, struct bhd_rsp *rsp)
 {
     int rc;
@@ -426,7 +426,7 @@ bhd_disc_svc_uuid_req_handle(cJSON *parent,
  *                              0 for no response.
  */
 static int
-bhd_disc_all_chrs_req_handle(cJSON *parent,
+bhd_disc_all_chrs_req_run(cJSON *parent,
                              struct bhd_req *req, struct bhd_rsp *rsp)
 {
     int rc;
@@ -461,7 +461,7 @@ bhd_disc_all_chrs_req_handle(cJSON *parent,
  *                              0 for no response.
  */
 static int
-bhd_disc_chr_uuid_req_handle(cJSON *parent,
+bhd_disc_chr_uuid_req_run(cJSON *parent,
                              struct bhd_req *req, struct bhd_rsp *rsp)
 {
     int rc;
@@ -534,7 +534,7 @@ bhd_write_req_dec(cJSON *parent, uint8_t *attr_buf, int attr_buf_sz,
  *                              0 for no response.
  */
 static int
-bhd_write_req_handle(cJSON *parent,
+bhd_write_req_run(cJSON *parent,
                      struct bhd_req *req, struct bhd_rsp *rsp)
 {
     uint8_t buf[BLE_ATT_ATTR_MAX_LEN + 3];
@@ -554,7 +554,7 @@ bhd_write_req_handle(cJSON *parent,
  *                              0 for no response.
  */
 static int
-bhd_write_cmd_req_handle(cJSON *parent,
+bhd_write_cmd_req_run(cJSON *parent,
                          struct bhd_req *req, struct bhd_rsp *rsp)
 {
     uint8_t buf[BLE_ATT_ATTR_MAX_LEN + 3];
@@ -574,7 +574,7 @@ bhd_write_cmd_req_handle(cJSON *parent,
  *                              0 for no response.
  */
 static int
-bhd_exchange_mtu_req_handle(cJSON *parent, struct bhd_req *req,
+bhd_exchange_mtu_req_run(cJSON *parent, struct bhd_req *req,
                             struct bhd_rsp *rsp)
 {
     int rc;
@@ -594,7 +594,7 @@ bhd_exchange_mtu_req_handle(cJSON *parent, struct bhd_req *req,
  *                              0 for no response.
  */
 static int
-bhd_gen_rand_addr_req_handle(cJSON *parent, struct bhd_req *req,
+bhd_gen_rand_addr_req_run(cJSON *parent, struct bhd_req *req,
                              struct bhd_rsp *rsp)
 {
     int rc;
@@ -614,7 +614,7 @@ bhd_gen_rand_addr_req_handle(cJSON *parent, struct bhd_req *req,
  *                              0 for no response.
  */
 static int
-bhd_set_rand_addr_req_handle(cJSON *parent, struct bhd_req *req,
+bhd_set_rand_addr_req_run(cJSON *parent, struct bhd_req *req,
                              struct bhd_rsp *rsp)
 {
     int rc;
@@ -629,7 +629,7 @@ bhd_set_rand_addr_req_handle(cJSON *parent, struct bhd_req *req,
 }
 
 static int
-bhd_conn_cancel_req_handle(cJSON *parent, struct bhd_req *req,
+bhd_conn_cancel_req_run(cJSON *parent, struct bhd_req *req,
                            struct bhd_rsp *rsp)
 {
     bhd_gap_conn_cancel(req, rsp);
@@ -637,7 +637,7 @@ bhd_conn_cancel_req_handle(cJSON *parent, struct bhd_req *req,
 }
 
 static int
-bhd_scan_req_handle(cJSON *parent, struct bhd_req *req, struct bhd_rsp *rsp)
+bhd_scan_req_run(cJSON *parent, struct bhd_req *req, struct bhd_rsp *rsp)
 {
     int rc;
 
@@ -702,7 +702,7 @@ bhd_scan_req_handle(cJSON *parent, struct bhd_req *req, struct bhd_rsp *rsp)
 }
 
 static int
-bhd_scan_cancel_req_handle(cJSON *parent,
+bhd_scan_cancel_req_run(cJSON *parent,
                            struct bhd_req *req, struct bhd_rsp *rsp)
 {
     bhd_gap_scan_cancel(req, rsp);
@@ -710,7 +710,7 @@ bhd_scan_cancel_req_handle(cJSON *parent,
 }
 
 static int
-bhd_set_preferred_mtu_req_handle(cJSON *parent,
+bhd_set_preferred_mtu_req_run(cJSON *parent,
                                  struct bhd_req *req, struct bhd_rsp *rsp)
 {
     bhd_gattc_set_preferred_mtu(req, rsp);
@@ -724,7 +724,7 @@ bhd_set_preferred_mtu_req_handle(cJSON *parent,
 int
 bhd_req_dec(const char *json, struct bhd_rsp *out_rsp)
 {
-    bhd_req_handle_fn *req_cb;
+    bhd_req_run_fn *req_cb;
     struct bhd_err_rsp err;
     struct bhd_req req;
     cJSON *root;
