@@ -95,7 +95,7 @@ bhd_gap_send_notify_rx_evt(uint16_t conn_handle, uint16_t attr_handle,
 
     evt.hdr.op = BHD_MSG_OP_EVT;
     evt.hdr.type = BHD_MSG_TYPE_NOTIFY_RX_EVT;
-    evt.hdr.seq = 0; // XXX
+    evt.hdr.seq = bhd_next_evt_seq(); 
     evt.notify_rx.conn_handle = conn_handle;
     evt.notify_rx.attr_handle = attr_handle;
     evt.notify_rx.indication = indication;
