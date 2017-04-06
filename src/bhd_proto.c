@@ -33,6 +33,7 @@ static bhd_req_run_fn bhd_scan_req_run;
 static bhd_req_run_fn bhd_scan_cancel_req_run;
 static bhd_req_run_fn bhd_set_preferred_mtu_req_run;
 static bhd_req_run_fn bhd_security_initiate_req_run;
+static bhd_req_run_fn bhd_conn_find_req_run;
 
 static const struct bhd_req_dispatch_entry {
     int req_type;
@@ -55,6 +56,7 @@ static const struct bhd_req_dispatch_entry {
     { BHD_MSG_TYPE_SCAN_CANCEL,         bhd_scan_cancel_req_run },
     { BHD_MSG_TYPE_SET_PREFERRED_MTU,   bhd_set_preferred_mtu_req_run },
     { BHD_MSG_TYPE_SECURITY_INITIATE,   bhd_security_initiate_req_run },
+    { BHD_MSG_TYPE_CONN_FIND,           bhd_conn_find_req_run },
 
     { -1 },
 };
@@ -77,6 +79,7 @@ static bhd_subrsp_enc_fn bhd_scan_rsp_enc;
 static bhd_subrsp_enc_fn bhd_scan_cancel_rsp_enc;
 static bhd_subrsp_enc_fn bhd_set_preferred_mtu_rsp_enc;
 static bhd_subrsp_enc_fn bhd_security_initiate_rsp_enc;
+static bhd_subrsp_enc_fn bhd_conn_find_rsp_enc;
 
 static const struct bhd_rsp_dispatch_entry {
     int rsp_type;
@@ -100,6 +103,7 @@ static const struct bhd_rsp_dispatch_entry {
     { BHD_MSG_TYPE_SCAN_CANCEL,         bhd_scan_cancel_rsp_enc },
     { BHD_MSG_TYPE_SET_PREFERRED_MTU,   bhd_set_preferred_mtu_rsp_enc },
     { BHD_MSG_TYPE_SECURITY_INITIATE,   bhd_security_initiate_rsp_enc },
+    { BHD_MSG_TYPE_CONN_FIND,           bhd_conn_find_rsp_enc },
 
     { -1 },
 };
@@ -747,6 +751,22 @@ bhd_security_initiate_req_run(cJSON *parent,
     return 1;
 }
 
+static int
+bhd_conn_find_req_run(cJSON *parent,
+                      struct bhd_req *req, struct bhd_rsp *rsp)
+{
+    int rc;
+
+    req->conn_find.conn_handle =
+        bhd_json_int_bounds(parent, "conn_handle", 0, UINT16_MAX, &rc);
+    if (rc != 0) {
+        bhd_err_build(rsp, rc, "invalid conn_handle");
+        return 1;
+    }
+    bhd_gap_conn_find(req, rsp);
+    return 1;
+}
+
 /**
  * @return                      1 if a response should be sent;
  *                              0 for no response.
@@ -951,6 +971,59 @@ bhd_security_initiate_rsp_enc(cJSON *parent, const struct bhd_rsp *rsp)
     return 0;
 }
 
+static int
+bhd_conn_find_rsp_enc(cJSON *parent, const struct bhd_rsp *rsp)
+{
+    bhd_json_add_int(parent, "status", rsp->conn_find.status);
+
+    if (rsp->conn_find.conn_handle != BLE_HS_CONN_HANDLE_NONE) {
+        bhd_json_add_int(parent, "conn_handle", rsp->conn_find.conn_handle);
+    }
+
+    bhd_json_add_int(parent, "conn_itvl", rsp->conn_find.conn_itvl);
+    bhd_json_add_int(parent, "conn_latency", rsp->conn_find.conn_latency);
+    bhd_json_add_int(parent, "supervision_timeout",
+                     rsp->conn_find.supervision_timeout);
+    bhd_json_add_int(parent, "role", rsp->conn_find.role);
+    bhd_json_add_int(parent, "master_clock_accuracy",
+                     rsp->conn_find.master_clock_accuracy);
+
+    if (rsp->conn_find.our_id_addr.type != BHD_ADDR_TYPE_NONE) {
+        bhd_json_add_addr_type(parent, "own_id_addr_type",
+                               rsp->conn_find.our_id_addr.type);
+        bhd_json_add_addr(parent, "own_id_addr",
+                          rsp->conn_find.our_id_addr.val);
+    }
+
+    if (rsp->conn_find.our_ota_addr.type != BHD_ADDR_TYPE_NONE) {
+        bhd_json_add_addr_type(parent, "own_ota_addr_type",
+                               rsp->conn_find.our_ota_addr.type);
+        bhd_json_add_addr(parent, "own_ota_addr",
+                          rsp->conn_find.our_ota_addr.val);
+    }
+
+    if (rsp->conn_find.peer_id_addr.type != BHD_ADDR_TYPE_NONE) {
+        bhd_json_add_addr_type(parent, "peer_id_addr_type",
+                               rsp->conn_find.peer_id_addr.type);
+        bhd_json_add_addr(parent, "peer_id_addr",
+                          rsp->conn_find.peer_id_addr.val);
+    }
+
+    if (rsp->conn_find.peer_ota_addr.type != BHD_ADDR_TYPE_NONE) {
+        bhd_json_add_addr_type(parent, "peer_ota_addr_type",
+                               rsp->conn_find.peer_ota_addr.type);
+        bhd_json_add_addr(parent, "peer_ota_addr",
+                          rsp->conn_find.peer_ota_addr.val);
+    }
+
+    bhd_json_add_bool(parent, "encrypted", rsp->conn_find.encrypted);
+    bhd_json_add_bool(parent, "authenticated", rsp->conn_find.authenticated);
+    bhd_json_add_bool(parent, "bonded", rsp->conn_find.bonded);
+    bhd_json_add_int(parent, "key_size", rsp->conn_find.key_size);
+
+    return 0;
+}
+
 int
 bhd_rsp_enc(const struct bhd_rsp *rsp, cJSON **out_root)
 {
@@ -1003,47 +1076,6 @@ bhd_connect_evt_enc(cJSON *parent, const struct bhd_evt *evt)
     if (evt->connect.conn_handle != BLE_HS_CONN_HANDLE_NONE) {
         bhd_json_add_int(parent, "conn_handle", evt->connect.conn_handle);
     }
-
-    bhd_json_add_int(parent, "conn_itvl", evt->connect.conn_itvl);
-    bhd_json_add_int(parent, "conn_latency", evt->connect.conn_latency);
-    bhd_json_add_int(parent, "supervision_timeout",
-                     evt->connect.supervision_timeout);
-    bhd_json_add_int(parent, "role", evt->connect.role);
-    bhd_json_add_int(parent, "master_clock_accuracy",
-                     evt->connect.master_clock_accuracy);
-
-    if (evt->connect.our_id_addr.type != BHD_ADDR_TYPE_NONE) {
-        bhd_json_add_addr_type(parent, "own_id_addr_type",
-                               evt->connect.our_id_addr.type);
-        bhd_json_add_addr(parent, "own_id_addr",
-                          evt->connect.our_id_addr.val);
-    }
-
-    if (evt->connect.our_ota_addr.type != BHD_ADDR_TYPE_NONE) {
-        bhd_json_add_addr_type(parent, "own_ota_addr_type",
-                               evt->connect.our_ota_addr.type);
-        bhd_json_add_addr(parent, "own_ota_addr",
-                          evt->connect.our_ota_addr.val);
-    }
-
-    if (evt->connect.peer_id_addr.type != BHD_ADDR_TYPE_NONE) {
-        bhd_json_add_addr_type(parent, "peer_id_addr_type",
-                               evt->connect.peer_id_addr.type);
-        bhd_json_add_addr(parent, "peer_id_addr",
-                          evt->connect.peer_id_addr.val);
-    }
-
-    if (evt->connect.peer_ota_addr.type != BHD_ADDR_TYPE_NONE) {
-        bhd_json_add_addr_type(parent, "peer_ota_addr_type",
-                               evt->connect.peer_ota_addr.type);
-        bhd_json_add_addr(parent, "peer_ota_addr",
-                          evt->connect.peer_ota_addr.val);
-    }
-
-    bhd_json_add_bool(parent, "encrypted", evt->connect.encrypted);
-    bhd_json_add_bool(parent, "authenticated", evt->connect.authenticated);
-    bhd_json_add_bool(parent, "bonded", evt->connect.bonded);
-    bhd_json_add_int(parent, "key_size", evt->connect.key_size);
 
     return 0;
 }

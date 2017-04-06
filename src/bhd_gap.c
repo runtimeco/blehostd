@@ -21,37 +21,13 @@ static int
 bhd_gap_send_connect_evt(bhd_seq_t seq, uint16_t conn_handle, int status)
 {
     struct bhd_evt evt = {{0}};
-    struct ble_gap_conn_desc desc;
     int rc;
 
     evt.hdr.op = BHD_MSG_OP_EVT;
     evt.hdr.type = BHD_MSG_TYPE_CONNECT_EVT;
     evt.hdr.seq = seq;
     evt.connect.status = status;
-
-    if (status == 0) {
-        rc = ble_gap_conn_find(conn_handle, &desc);
-        if (rc != 0) {
-            return rc;
-        }
-
-        evt.connect.conn_handle = conn_handle;
-        evt.connect.conn_itvl = desc.conn_itvl;
-        evt.connect.conn_latency = desc.conn_latency;
-        evt.connect.supervision_timeout = desc.supervision_timeout;
-        evt.connect.role = desc.role;
-        evt.connect.master_clock_accuracy = desc.master_clock_accuracy;
-
-        evt.connect.our_id_addr = desc.our_id_addr;
-        evt.connect.peer_id_addr = desc.peer_id_addr;
-        evt.connect.our_ota_addr = desc.our_ota_addr;
-        evt.connect.peer_ota_addr = desc.peer_ota_addr;
-
-        evt.connect.encrypted = desc.sec_state.encrypted;
-        evt.connect.authenticated = desc.sec_state.authenticated;
-        evt.connect.bonded = desc.sec_state.bonded;
-        evt.connect.key_size = desc.sec_state.key_size;
-    }
+    evt.connect.conn_handle = conn_handle;
 
     rc = bhd_evt_send(&evt);
     if (rc != 0) {
@@ -397,4 +373,33 @@ bhd_gap_security_initiate(const struct bhd_req *req, struct bhd_rsp *out_rsp)
 {
     out_rsp->security_initiate.status =
         ble_gap_security_initiate(req->security_initiate.conn_handle);
+}
+
+void
+bhd_gap_conn_find(const struct bhd_req *req, struct bhd_rsp *out_rsp)
+{
+    struct ble_gap_conn_desc desc;
+
+    out_rsp->conn_find.status =
+        ble_gap_conn_find(req->conn_find.conn_handle, &desc);
+    if (out_rsp->conn_find.status != 0) {
+        return;
+    }
+
+    out_rsp->conn_find.conn_handle = req->conn_find.conn_handle;
+    out_rsp->conn_find.conn_itvl = desc.conn_itvl;
+    out_rsp->conn_find.conn_latency = desc.conn_latency;
+    out_rsp->conn_find.supervision_timeout = desc.supervision_timeout;
+    out_rsp->conn_find.role = desc.role;
+    out_rsp->conn_find.master_clock_accuracy = desc.master_clock_accuracy;
+
+    out_rsp->conn_find.our_id_addr = desc.our_id_addr;
+    out_rsp->conn_find.peer_id_addr = desc.peer_id_addr;
+    out_rsp->conn_find.our_ota_addr = desc.our_ota_addr;
+    out_rsp->conn_find.peer_ota_addr = desc.peer_ota_addr;
+
+    out_rsp->conn_find.encrypted = desc.sec_state.encrypted;
+    out_rsp->conn_find.authenticated = desc.sec_state.authenticated;
+    out_rsp->conn_find.bonded = desc.sec_state.bonded;
+    out_rsp->conn_find.key_size = desc.sec_state.key_size;
 }
