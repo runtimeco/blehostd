@@ -33,6 +33,7 @@ static const struct bhd_kv_str_int bhd_type_map[] = {
     { "scan",               BHD_MSG_TYPE_SCAN },
     { "scan_cancel",        BHD_MSG_TYPE_SCAN_CANCEL },
     { "set_preferred_mtu",  BHD_MSG_TYPE_SET_PREFERRED_MTU },
+    { "security_initiate",  BHD_MSG_TYPE_SECURITY_INITIATE },
 
     { "sync_evt",       BHD_MSG_TYPE_SYNC_EVT },
     { "connect_evt",    BHD_MSG_TYPE_CONNECT_EVT },
@@ -43,6 +44,7 @@ static const struct bhd_kv_str_int bhd_type_map[] = {
     { "notify_rx_evt",  BHD_MSG_TYPE_NOTIFY_RX_EVT },
     { "mtu_change_evt", BHD_MSG_TYPE_MTU_CHANGE_EVT },
     { "scan_evt",       BHD_MSG_TYPE_SCAN_EVT },
+    { "enc_change_evt", BHD_MSG_TYPE_ENC_CHANGE_EVT },
 
     { 0 },
 };

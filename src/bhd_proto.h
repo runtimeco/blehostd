@@ -26,6 +26,7 @@
 #define BHD_MSG_TYPE_SCAN                   15
 #define BHD_MSG_TYPE_SCAN_CANCEL            16
 #define BHD_MSG_TYPE_SET_PREFERRED_MTU      17
+#define BHD_MSG_TYPE_SECURITY_INITIATE      18
 
 #define BHD_MSG_TYPE_SYNC_EVT               2049
 #define BHD_MSG_TYPE_CONNECT_EVT            2050
@@ -36,6 +37,7 @@
 #define BHD_MSG_TYPE_NOTIFY_RX_EVT          2055
 #define BHD_MSG_TYPE_MTU_CHANGE_EVT         2056
 #define BHD_MSG_TYPE_SCAN_EVT               2057
+#define BHD_MSG_TYPE_ENC_CHANGE_EVT         2058
 
 #define BHD_ADDR_TYPE_NONE                  255
 
@@ -130,6 +132,10 @@ struct bhd_set_preferred_mtu_req {
     uint16_t mtu;
 };
 
+struct bhd_security_initiate_req {
+    uint16_t conn_handle;
+};
+
 struct bhd_req {
     struct bhd_msg_hdr hdr;
     union {
@@ -145,6 +151,7 @@ struct bhd_req {
         struct bhd_set_rand_addr_req set_rand_addr;
         struct bhd_scan_req scan;
         struct bhd_set_preferred_mtu_req set_preferred_mtu;
+        struct bhd_security_initiate_req security_initiate;
     };
 };
 
@@ -216,6 +223,10 @@ struct bhd_set_preferred_mtu_rsp {
     int status;
 };
 
+struct bhd_security_initiate_rsp {
+    int status;
+};
+
 struct bhd_rsp {
     struct bhd_msg_hdr hdr;
     union {
@@ -235,6 +246,7 @@ struct bhd_rsp {
         struct bhd_scan_rsp scan;
         struct bhd_scan_cancel_rsp scan_cancel;
         struct bhd_set_preferred_mtu_rsp set_preferred_mtu;
+        struct bhd_security_initiate_rsp security_initiate;
     };
 };
 
@@ -374,7 +386,11 @@ struct bhd_scan_evt {
     /*** 0xff - Manufacturer specific data. */
     uint8_t data_mfg_data[BLE_HS_ADV_MAX_FIELD_SZ];
     uint8_t data_mfg_data_len;
+};
 
+struct bhd_enc_change_evt {
+    uint16_t conn_handle;
+    int status;
 };
 
 struct bhd_evt {
@@ -389,6 +405,7 @@ struct bhd_evt {
         struct bhd_notify_rx_evt notify_rx;
         struct bhd_mtu_change_evt mtu_change;
         struct bhd_scan_evt scan;
+        struct bhd_enc_change_evt enc_change;
     };
 };
 

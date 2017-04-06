@@ -32,6 +32,7 @@ static bhd_req_run_fn bhd_conn_cancel_req_run;
 static bhd_req_run_fn bhd_scan_req_run;
 static bhd_req_run_fn bhd_scan_cancel_req_run;
 static bhd_req_run_fn bhd_set_preferred_mtu_req_run;
+static bhd_req_run_fn bhd_security_initiate_req_run;
 
 static const struct bhd_req_dispatch_entry {
     int req_type;
@@ -53,6 +54,7 @@ static const struct bhd_req_dispatch_entry {
     { BHD_MSG_TYPE_SCAN,                bhd_scan_req_run },
     { BHD_MSG_TYPE_SCAN_CANCEL,         bhd_scan_cancel_req_run },
     { BHD_MSG_TYPE_SET_PREFERRED_MTU,   bhd_set_preferred_mtu_req_run },
+    { BHD_MSG_TYPE_SECURITY_INITIATE,   bhd_security_initiate_req_run },
 
     { -1 },
 };
@@ -74,6 +76,7 @@ static bhd_subrsp_enc_fn bhd_conn_cancel_rsp_enc;
 static bhd_subrsp_enc_fn bhd_scan_rsp_enc;
 static bhd_subrsp_enc_fn bhd_scan_cancel_rsp_enc;
 static bhd_subrsp_enc_fn bhd_set_preferred_mtu_rsp_enc;
+static bhd_subrsp_enc_fn bhd_security_initiate_rsp_enc;
 
 static const struct bhd_rsp_dispatch_entry {
     int rsp_type;
@@ -96,6 +99,7 @@ static const struct bhd_rsp_dispatch_entry {
     { BHD_MSG_TYPE_SCAN,                bhd_scan_rsp_enc },
     { BHD_MSG_TYPE_SCAN_CANCEL,         bhd_scan_cancel_rsp_enc },
     { BHD_MSG_TYPE_SET_PREFERRED_MTU,   bhd_set_preferred_mtu_rsp_enc },
+    { BHD_MSG_TYPE_SECURITY_INITIATE,   bhd_security_initiate_rsp_enc },
 
     { -1 },
 };
@@ -110,6 +114,7 @@ static bhd_evt_enc_fn bhd_write_ack_evt_enc;
 static bhd_evt_enc_fn bhd_notify_rx_evt_enc;
 static bhd_evt_enc_fn bhd_mtu_change_evt_enc;
 static bhd_evt_enc_fn bhd_scan_evt_enc;
+static bhd_evt_enc_fn bhd_enc_change_evt_enc;
 
 static const struct bhd_evt_dispatch_entry {
     int msg_type;
@@ -124,6 +129,7 @@ static const struct bhd_evt_dispatch_entry {
     { BHD_MSG_TYPE_NOTIFY_RX_EVT,       bhd_notify_rx_evt_enc },
     { BHD_MSG_TYPE_MTU_CHANGE_EVT,      bhd_mtu_change_evt_enc },
     { BHD_MSG_TYPE_SCAN_EVT,            bhd_scan_evt_enc },
+    { BHD_MSG_TYPE_ENC_CHANGE_EVT,      bhd_enc_change_evt_enc },
 
     { -1 },
 };
@@ -725,6 +731,22 @@ bhd_set_preferred_mtu_req_run(cJSON *parent,
     return 1;
 }
 
+static int
+bhd_security_initiate_req_run(cJSON *parent,
+                              struct bhd_req *req, struct bhd_rsp *rsp)
+{
+    int rc;
+
+    req->security_initiate.conn_handle =
+        bhd_json_int_bounds(parent, "conn_handle", 0, UINT16_MAX, &rc);
+    if (rc != 0) {
+        bhd_err_build(rsp, rc, "invalid conn_handle");
+        return 1;
+    }
+    bhd_gap_security_initiate(req, rsp);
+    return 1;
+}
+
 /**
  * @return                      1 if a response should be sent;
  *                              0 for no response.
@@ -919,6 +941,13 @@ static int
 bhd_set_preferred_mtu_rsp_enc(cJSON *parent, const struct bhd_rsp *rsp)
 {
     bhd_json_add_int(parent, "status", rsp->set_preferred_mtu.status);
+    return 0;
+}
+
+static int
+bhd_security_initiate_rsp_enc(cJSON *parent, const struct bhd_rsp *rsp)
+{
+    bhd_json_add_int(parent, "status", rsp->security_initiate.status);
     return 0;
 }
 
@@ -1239,6 +1268,14 @@ bhd_scan_evt_enc(cJSON *parent, const struct bhd_evt *evt)
                            evt->scan.data_mfg_data_len);
     }
 
+    return 0;
+}
+
+static int
+bhd_enc_change_evt_enc(cJSON *parent, const struct bhd_evt *evt)
+{
+    bhd_json_add_int(parent, "conn_handle", evt->enc_change.conn_handle);
+    bhd_json_add_int(parent, "status", evt->enc_change.status);
     return 0;
 }
 
