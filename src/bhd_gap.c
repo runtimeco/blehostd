@@ -18,7 +18,7 @@ static const struct ble_gap_conn_desc bhd_gap_null_desc = {
 };
 
 static int
-bhd_gap_send_connect_evt(bhd_seq_t seq, uint16_t conn_handle, int status)
+bhd_gap_send_connect_evt(int status, uint16_t conn_handle, bhd_seq_t seq)
 {
     struct bhd_evt evt = {{0}};
     int rc;
@@ -38,8 +38,9 @@ bhd_gap_send_connect_evt(bhd_seq_t seq, uint16_t conn_handle, int status)
 }
 
 static int
-bhd_gap_send_disconnect_evt(const struct ble_gap_conn_desc *desc, int reason,
-                            int_least32_t seq)
+bhd_gap_send_disconnect_evt(int reason,
+                            const struct ble_gap_conn_desc *desc,
+                            bhd_seq_t seq)
 {
     struct bhd_evt evt = {{0}};
     int rc;
@@ -62,9 +63,11 @@ bhd_gap_send_disconnect_evt(const struct ble_gap_conn_desc *desc, int reason,
 }
 
 static int
-bhd_gap_send_notify_rx_evt(uint16_t conn_handle, uint16_t attr_handle,
-                            int indication,
-                            const uint8_t *attr_val, int attr_len)
+bhd_gap_send_notify_rx_evt(uint16_t conn_handle,
+                           uint16_t attr_handle,
+                           int indication,
+                           const uint8_t *attr_val,
+                           int attr_len)
 {
     struct bhd_evt evt = {{0}};
     int rc;
@@ -87,7 +90,7 @@ bhd_gap_send_notify_rx_evt(uint16_t conn_handle, uint16_t attr_handle,
 }
 
 static int
-bhd_gap_send_scan_evt(bhd_seq_t seq, const struct ble_gap_disc_desc *desc)
+bhd_gap_send_scan_evt(const struct ble_gap_disc_desc *desc, bhd_seq_t seq)
 {
     struct bhd_evt evt = {{0}};
     struct ble_hs_adv_fields fields;
@@ -197,7 +200,7 @@ bhd_gap_send_scan_evt(bhd_seq_t seq, const struct ble_gap_disc_desc *desc)
 }
 
 static int
-bhd_gap_send_enc_change_evt(bhd_seq_t seq, uint16_t conn_handle, int status)
+bhd_gap_send_enc_change_evt(int status, uint16_t conn_handle, bhd_seq_t seq)
 {
     struct bhd_evt evt = {{0}};
     int rc;
@@ -223,27 +226,27 @@ static int
 bhd_gap_event(struct ble_gap_event *event, void *arg)
 {
     uint8_t buf[BLE_ATT_ATTR_MAX_LEN];
-    uintptr_t seq;
+    bhd_seq_t seq;
     uint16_t attr_len;
     int rc;
 
-    seq = (uintptr_t)arg;
+    seq = (bhd_seq_t)(uintptr_t)arg;
 
     switch (event->type) {
     case BLE_GAP_EVENT_DISC:
-        bhd_gap_send_scan_evt(seq, &event->disc);
+        bhd_gap_send_scan_evt(&event->disc, seq);
         return 0;
 
     case BLE_GAP_EVENT_CONNECT:
         /* A new connection was established or a connection attempt failed. */
-        bhd_gap_send_connect_evt(seq,
+        bhd_gap_send_connect_evt(event->connect.status,
                                  event->connect.conn_handle,
-                                 event->connect.status);
+                                 seq);
         return 0;
 
     case BLE_GAP_EVENT_DISCONNECT:
-        bhd_gap_send_disconnect_evt(&event->disconnect.conn,
-                                    event->disconnect.reason,
+        bhd_gap_send_disconnect_evt(event->disconnect.reason,
+                                    &event->disconnect.conn,
                                     seq);
         return 0;
 
@@ -268,8 +271,8 @@ bhd_gap_event(struct ble_gap_event *event, void *arg)
         return 0;
 
     case BLE_GAP_EVENT_ENC_CHANGE:
-        bhd_gap_send_enc_change_evt(event->enc_change.conn_handle,
-                                    event->enc_change.status,
+        bhd_gap_send_enc_change_evt(event->enc_change.status,
+                                    event->enc_change.conn_handle,
                                     seq);
         return 0;
 

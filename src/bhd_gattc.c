@@ -10,12 +10,12 @@
 #include "host/ble_hs.h"
 
 struct bhd_gattc_disc_chr_arg {
-    uint16_t seq;
+    bhd_seq_t seq;
     uint16_t svc_start_handle;
 };
 
 struct bhd_gattc_disc_dsc_arg {
-    uint16_t seq;
+    bhd_seq_t seq;
     uint16_t chr_val_handle;
 };
 
@@ -26,9 +26,9 @@ bhd_gattc_disc_svc_cb(uint16_t conn_handle,
                       void *arg)
 {
     struct bhd_evt evt = {0};
-    uintptr_t seq;
+    bhd_seq_t seq;
 
-    seq = (uintptr_t)arg;
+    seq = (bhd_seq_t)(uintptr_t)arg;
 
     evt.hdr.op = BHD_MSG_OP_EVT;
     evt.hdr.type = BHD_MSG_TYPE_DISC_SVC_EVT;
@@ -82,9 +82,9 @@ bhd_gattc_write_cb(uint16_t conn_handle,
                    void *arg)
 {
     struct bhd_evt evt = {0};
-    uintptr_t seq;
+    bhd_seq_t seq;
 
-    seq = (uintptr_t)arg;
+    seq = (bhd_seq_t)(uintptr_t)arg;
 
     evt.hdr.op = BHD_MSG_OP_EVT;
     evt.hdr.type = BHD_MSG_TYPE_WRITE_ACK_EVT;
@@ -105,9 +105,9 @@ bhd_gatt_mtu_cb(uint16_t conn_handle,
                 uint16_t mtu,
                 void *arg)
 {
-    uintptr_t seq;
+    bhd_seq_t seq;
 
-    seq = (uintptr_t)arg;
+    seq = (bhd_seq_t)(uintptr_t)arg;
     bhd_send_mtu_changed(seq, conn_handle, error->status, mtu);
 
     return 0;

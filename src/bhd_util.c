@@ -632,7 +632,7 @@ malloc_success(size_t num_bytes)
     return v;
 }
 
-uint32_t
+bhd_seq_t
 bhd_next_evt_seq(void)
 {
     static bhd_seq_t next_seq = BHD_SEQ_EVT_MIN;

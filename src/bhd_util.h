@@ -2,7 +2,7 @@
 #define H_BHD_UTIL_
 
 void *malloc_success(size_t num_bytes);
-uint32_t bhd_next_evt_seq(void);
+bhd_seq_t bhd_next_evt_seq(void);
 
 int bhd_op_parse(const char *op_str);
 const char *bhd_op_rev_parse(int op);
