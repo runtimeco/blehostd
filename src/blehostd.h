@@ -15,7 +15,7 @@ struct bhd_dev;
 struct bhd_connect_req;
 struct peer;
 
-extern int bhd_debug_log;
+extern FILE *blehostd_log_file;
 
 struct bhd_kv_str_int {
     const char *key;
@@ -49,6 +49,9 @@ int bhd_rsp_enc(const struct bhd_rsp *rsp, cJSON **out_root);
     do {                                                    \
         if (MYNEWT_VAL(LOG_LEVEL) <= LOG_LEVEL_ ## lvl) {   \
             dprintf(1, __VA_ARGS__);                        \
+            if (blehostd_log_file != NULL) {                \
+                fprintf(blehostd_log_file, __VA_ARGS__);    \
+            }                                               \
         }                                                   \
     } while (0)
 

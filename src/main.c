@@ -24,6 +24,8 @@
 
 #define BLEHOSTD_MAX_MSG_SZ     10240
 
+FILE *blehostd_log_file;
+
 static struct os_task blehostd_task;
 static os_stack_t blehostd_stack[BLEHOSTD_STACK_SIZE];
 
@@ -324,6 +326,22 @@ print_usage(FILE *stream)
     fprintf(stream, "usage: blehostd <controller-device> <socket-path>\n");
 }
 
+static void
+bhd_open_log(char *argv0)
+{
+    size_t len;
+
+    len = strlen(argv0);
+    if (len < 3) {
+        return;
+    }
+
+    argv0[len - 3] = 'l';
+    argv0[len - 2] = 'o';
+    argv0[len - 1] = 'g';
+    blehostd_log_file = fopen(argv0, "a");
+}
+
 int
 main(int argc, char **argv)
 {
@@ -336,11 +354,13 @@ main(int argc, char **argv)
             return EXIT_FAILURE;
         }
 
+        bhd_open_log(argv[0]);
+
         blehostd_dev_filename = argv[1];
         blehostd_socket_filename = argv[2];
 
-        BHD_LOG(DEBUG,
-                "blehostd_dev_filename=%s blehostd_socket_filename=%s\n",
+        BHD_LOG(INFO,
+                "*** Starting blehostd %s %s\n",
                 blehostd_dev_filename, blehostd_socket_filename);
 
 #ifdef ARCH_sim
