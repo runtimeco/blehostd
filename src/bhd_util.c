@@ -45,6 +45,7 @@ static const struct bhd_kv_str_int bhd_type_map[] = {
     { "notify_rx_evt",  BHD_MSG_TYPE_NOTIFY_RX_EVT },
     { "mtu_change_evt", BHD_MSG_TYPE_MTU_CHANGE_EVT },
     { "scan_evt",       BHD_MSG_TYPE_SCAN_EVT },
+    { "scan_tmo_evt",   BHD_MSG_TYPE_SCAN_TMO_EVT },
     { "enc_change_evt", BHD_MSG_TYPE_ENC_CHANGE_EVT },
 
     { 0 },

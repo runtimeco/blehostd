@@ -117,6 +117,7 @@ static bhd_evt_enc_fn bhd_disc_chr_evt_enc;
 static bhd_evt_enc_fn bhd_write_ack_evt_enc;
 static bhd_evt_enc_fn bhd_notify_rx_evt_enc;
 static bhd_evt_enc_fn bhd_mtu_change_evt_enc;
+static bhd_evt_enc_fn bhd_scan_tmo_evt_enc;
 static bhd_evt_enc_fn bhd_scan_evt_enc;
 static bhd_evt_enc_fn bhd_enc_change_evt_enc;
 
@@ -133,6 +134,7 @@ static const struct bhd_evt_dispatch_entry {
     { BHD_MSG_TYPE_NOTIFY_RX_EVT,       bhd_notify_rx_evt_enc },
     { BHD_MSG_TYPE_MTU_CHANGE_EVT,      bhd_mtu_change_evt_enc },
     { BHD_MSG_TYPE_SCAN_EVT,            bhd_scan_evt_enc },
+    { BHD_MSG_TYPE_SCAN_TMO_EVT,        bhd_scan_tmo_evt_enc },
     { BHD_MSG_TYPE_ENC_CHANGE_EVT,      bhd_enc_change_evt_enc },
 
     { -1 },
@@ -1300,6 +1302,12 @@ bhd_scan_evt_enc(cJSON *parent, const struct bhd_evt *evt)
                            evt->scan.data_mfg_data_len);
     }
 
+    return 0;
+}
+
+static int
+bhd_scan_tmo_evt_enc(cJSON *parent, const struct bhd_evt *evt)
+{
     return 0;
 }
 
