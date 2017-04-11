@@ -1,8 +1,10 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <stdarg.h>
 #include <errno.h>
 #include <signal.h>
+#include <time.h>
 #include <unistd.h>
 #include <sys/socket.h>
 #include <sys/un.h>
@@ -24,7 +26,7 @@
 
 #define BLEHOSTD_MAX_MSG_SZ     10240
 
-FILE *blehostd_log_file;
+static FILE *blehostd_log_file;
 
 static struct os_task blehostd_task;
 static os_stack_t blehostd_stack[BLEHOSTD_STACK_SIZE];
@@ -40,6 +42,43 @@ static const char *blehostd_dev_filename;
 
 static struct os_mbuf *blehostd_packet;
 static uint16_t blehostd_packet_len;
+
+void
+blehostd_logf(const char *fmt, ...)
+{
+    static char buf[10240];
+    static int midline;
+	va_list args;
+    time_t tt;
+    char *ts;
+    int off;
+
+    if (blehostd_log_file == NULL) {
+        return;
+    }
+
+    off = 0;
+
+	va_start(args, fmt);
+
+    if (!midline) {
+        time(&tt);
+        ts = ctime(&tt);
+        if (ts != NULL) {
+            ts[24] = '\0';
+            off += snprintf(buf + off, sizeof buf - off, "%s    ", ts);
+        }
+    }
+
+    off += vsnprintf(buf + off, sizeof buf - off, fmt, args);
+    va_end(args);
+
+    if (off <= sizeof buf) {
+        midline = buf[off - 1] != '\n';
+    }
+
+    fputs(buf, blehostd_log_file);
+}
 
 int
 blehostd_enqueue_rsp(const char *json_rsp)
@@ -95,13 +134,13 @@ blehostd_process_rsp(struct os_mbuf *om)
     int i;
 
     assert(sizeof buf >= OS_MBUF_PKTLEN(om));
-    BHD_LOG(DEBUG, "sending %d bytes\n", OS_MBUF_PKTLEN(om));
+    BHD_LOG(DEBUG, "Sending %d bytes\n", OS_MBUF_PKTLEN(om));
 
     if (MYNEWT_VAL(LOG_LEVEL) <= LOG_LEVEL_DEBUG) {
         rc = os_mbuf_copydata(om, 0, OS_MBUF_PKTLEN(om), buf);
         assert(rc == 0);
         for (i = 0; i < OS_MBUF_PKTLEN(om); i++) {
-            BHD_LOG(DEBUG, " 0x%02x", buf[i]);
+            BHD_LOG(DEBUG, "%s0x%02x", i == 0 ? "" : " ", buf[i]);
         }
         BHD_LOG(DEBUG, "\n");
     }
