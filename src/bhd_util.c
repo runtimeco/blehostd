@@ -612,7 +612,7 @@ bhd_addr_str(char *dst, const uint8_t *addr)
 }
 
 void *
-bhd_seq_arg(uint16_t seq)
+bhd_seq_arg(bhd_seq_t seq)
 {
     uintptr_t uiptr;
     void *v;
@@ -638,7 +638,7 @@ bhd_next_evt_seq(void)
 {
     static bhd_seq_t next_seq = BHD_SEQ_EVT_MIN;
 
-    uint32_t seq;
+    bhd_seq_t seq;
     os_sr_t sr;
 
     OS_ENTER_CRITICAL(sr);
@@ -652,7 +652,7 @@ bhd_next_evt_seq(void)
 }
 
 int
-bhd_send_mtu_changed(uint32_t seq, uint16_t conn_handle, int status,
+bhd_send_mtu_changed(bhd_seq_t seq, uint16_t conn_handle, int status,
                      uint16_t mtu)
 {
     struct bhd_evt evt = {0};
@@ -671,7 +671,7 @@ bhd_send_mtu_changed(uint32_t seq, uint16_t conn_handle, int status,
 }
 
 int
-bhd_send_sync_evt(uint32_t seq)
+bhd_send_sync_evt(bhd_seq_t seq)
 {
     struct bhd_evt evt = {0};
     int rc;

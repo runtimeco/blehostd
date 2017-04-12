@@ -15,6 +15,8 @@ struct bhd_dev;
 struct bhd_connect_req;
 struct peer;
 
+typedef uint32_t bhd_seq_t;
+
 struct bhd_kv_str_int {
     const char *key;
     int val;
@@ -34,7 +36,7 @@ const char *bhd_kv_str_int_rev_find(const struct bhd_kv_str_int *map, int val);
 char *bhd_hex_str(char *dst, int max_dst_len, int *out_dst_len,
                   const uint8_t *src, int src_len);
 char *bhd_addr_str(char *dst, const uint8_t *addr);
-void *bhd_seq_arg(uint16_t seq);
+void *bhd_seq_arg(bhd_seq_t seq);
 
 int bhd_msg_send(cJSON *root);
 int bhd_rsp_send(const struct bhd_rsp *rsp);

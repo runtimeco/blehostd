@@ -43,7 +43,6 @@
 
 #define BHD_ADDR_TYPE_NONE                  255
 
-typedef uint32_t bhd_seq_t;
 #define BHD_SEQ_MIN                         0
 #define BHD_SEQ_EVT_MIN                     0xffffff00
 #define BHD_SEQ_MAX                         0xfffffff0
