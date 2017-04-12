@@ -1,2 +1,7 @@
 syscfg.vals:
     OS_MAIN_TASK_PRIO: 1
+
+    # We're running in sim; it's OK to over-allocate.
+    MSYS_1_BLOCK_COUNT: 1000
+    BLE_ACL_BUF_COUNT: 1000
+    BLE_MAX_CONNECTIONS: 64
