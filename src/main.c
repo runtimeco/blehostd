@@ -392,7 +392,6 @@ main(int argc, char **argv)
             print_usage(stderr);
             return EXIT_FAILURE;
         }
-
         bhd_open_log(argv[0]);
 
         blehostd_dev_filename = argv[1];
@@ -418,12 +417,14 @@ main(int argc, char **argv)
         return EXIT_FAILURE;
     }
 
+#if MYNEWT_VAL(BLEHOSTD_USE_UART)
     rc = uart_set_dev(MYNEWT_VAL(BLE_HCI_UART_PORT), blehostd_dev_filename);
     if (rc != 0) {
         fprintf(stderr, "Failed to open a serial connection to %s\n",
                 blehostd_dev_filename);
         return EXIT_FAILURE;
     }
+#endif
 
     sysinit();
 

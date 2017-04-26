@@ -1,3 +1,16 @@
+syscfg.defs:
+    BLEHOSTD_USE_SOCKET:
+       description: 'Use Linux bluetooth sockets to talk to controller'
+       value: 1
+       restrictions:
+         - "!BLEHOSTD_USE_UART"
+
+    BLEHOSTD_USE_UART:
+       description: 'Use UART transport to talk to controller'
+       value: 0
+       restrictions:
+         - "!BLEHOSTD_USE_SOCKET"
+
 syscfg.vals:
     OS_MAIN_TASK_PRIO: 1
 

@@ -28,7 +28,12 @@ pkg.deps:
     - encoding/json
     - encoding/cjson
     - net/nimble/host
-    - net/nimble/transport/uart
     - sys/console/full
     - sys/log/full
     - sys/stats/full
+
+pkg.deps.BLEHOSTD_USE_SOCKET:
+    - net/nimble/transport/socket
+
+pkg.deps.BLEHOSTD_USE_UART:
+    - net/nimble/transport/uart
