@@ -25,11 +25,12 @@ bhd_gattc_disc_svc_cb(uint16_t conn_handle,
                       const struct ble_gatt_svc *service,
                       void *arg)
 {
-    struct bhd_evt evt = {0};
+    struct bhd_evt evt;
     bhd_seq_t seq;
 
     seq = (bhd_seq_t)(uintptr_t)arg;
 
+    memset(&evt, 0, sizeof(evt));
     evt.hdr.op = BHD_MSG_OP_EVT;
     evt.hdr.type = BHD_MSG_TYPE_DISC_SVC_EVT;
     evt.hdr.seq = seq;
@@ -53,10 +54,11 @@ bhd_gattc_disc_chr_cb(uint16_t conn_handle,
                       void *arg)
 {
     struct bhd_gattc_disc_chr_arg *chr_arg;
-    struct bhd_evt evt = {0};
+    struct bhd_evt evt;
 
     chr_arg = arg;
 
+    memset(&evt, 0, sizeof(evt));
     evt.hdr.op = BHD_MSG_OP_EVT;
     evt.hdr.type = BHD_MSG_TYPE_DISC_CHR_EVT;
     evt.hdr.seq = chr_arg->seq;
@@ -81,11 +83,12 @@ bhd_gattc_write_cb(uint16_t conn_handle,
                    struct ble_gatt_attr *attr,
                    void *arg)
 {
-    struct bhd_evt evt = {0};
+    struct bhd_evt evt;
     bhd_seq_t seq;
 
     seq = (bhd_seq_t)(uintptr_t)arg;
 
+    memset(&evt, 0, sizeof(evt));
     evt.hdr.op = BHD_MSG_OP_EVT;
     evt.hdr.type = BHD_MSG_TYPE_WRITE_ACK_EVT;
     evt.hdr.seq = seq;

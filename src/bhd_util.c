@@ -655,9 +655,10 @@ int
 bhd_send_mtu_changed(bhd_seq_t seq, uint16_t conn_handle, int status,
                      uint16_t mtu)
 {
-    struct bhd_evt evt = {0};
+    struct bhd_evt evt;
     int rc;
 
+    memset(&evt, 0, sizeof(evt));
     evt.hdr.op = BHD_MSG_OP_EVT;
     evt.hdr.type = BHD_MSG_TYPE_MTU_CHANGE_EVT;
     evt.hdr.seq = seq;
@@ -673,9 +674,10 @@ bhd_send_mtu_changed(bhd_seq_t seq, uint16_t conn_handle, int status,
 int
 bhd_send_sync_evt(bhd_seq_t seq)
 {
-    struct bhd_evt evt = {0};
+    struct bhd_evt evt;
     int rc;
 
+    memset(&evt, 0, sizeof(evt));
     evt.hdr.op = BHD_MSG_OP_EVT;
     evt.hdr.type = BHD_MSG_TYPE_SYNC_EVT;
     evt.hdr.seq = seq;
