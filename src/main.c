@@ -322,13 +322,14 @@ blehostd_process_req(struct os_mbuf *om)
         goto done;
     }
 
-    BHD_LOG(DEBUG, "Received %d bytes:\n%s\n", OS_MBUF_PKTLEN(om), json);
+    BHD_LOG(DEBUG, "Received %d bytes:\n", OS_MBUF_PKTLEN(om));
     rc = os_mbuf_copydata(om, 0, OS_MBUF_PKTLEN(om), json);
     if (rc != 0) {
         BHD_LOG(ERROR, "os_mbuf_copydata() failed: rc=%d\n", rc);
         goto done;
     }
 
+    json[OS_MBUF_PKTLEN(om)] = '\0';
     BHD_LOG(DEBUG, "Received JSON request:\n%s\n", json);
 
     send_rsp = bhd_req_dec(json, &rsp);
