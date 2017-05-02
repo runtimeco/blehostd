@@ -80,6 +80,25 @@ blehostd_logf(const char *fmt, ...)
     fputs(buf, blehostd_log_file);
 }
 
+static void
+blehostd_log_mbuf(const struct os_mbuf *om)
+{
+    uint8_t u8;
+    int rc;
+    int i;
+
+    if (MYNEWT_VAL(LOG_LEVEL) > LOG_LEVEL_DEBUG) {
+        return;
+    }
+
+    for (i = 0; i < OS_MBUF_PKTLEN(om); i++) {
+        rc = os_mbuf_copydata(om, i, 1, &u8);
+        assert(rc == 0);
+        BHD_LOG(DEBUG, "%s0x%02x", i == 0 ? "" : " ", u8);
+    }
+    BHD_LOG(DEBUG, "\n");
+}
+
 int
 blehostd_enqueue_rsp(const char *json_rsp)
 {
@@ -129,22 +148,11 @@ err:
 static void
 blehostd_process_rsp(struct os_mbuf *om)
 {
-    uint8_t buf[4096];
     int rc;
-    int i;
 
-    assert(sizeof buf >= OS_MBUF_PKTLEN(om));
     BHD_LOG(DEBUG, "Sending %d bytes\n", OS_MBUF_PKTLEN(om));
 
-    if (MYNEWT_VAL(LOG_LEVEL) <= LOG_LEVEL_DEBUG) {
-        rc = os_mbuf_copydata(om, 0, OS_MBUF_PKTLEN(om), buf);
-        assert(rc == 0);
-        for (i = 0; i < OS_MBUF_PKTLEN(om); i++) {
-            BHD_LOG(DEBUG, "%s0x%02x", i == 0 ? "" : " ", buf[i]);
-        }
-        BHD_LOG(DEBUG, "\n");
-    }
-
+    blehostd_log_mbuf(om);
     rc = mn_sendto(blehostd_socket, om,
                    (struct mn_sockaddr *)&blehostd_server_addr);
     if (rc != 0) {
@@ -203,6 +211,26 @@ blehostd_connect(const char *sock_path)
     return 0;
 }
 
+static void
+blehostd_str_validate(const struct os_mbuf *om, char *file, int line)
+{
+    uint8_t u8;
+    int rc;
+    int i;
+
+    for (i = 0; i < OS_MBUF_PKTLEN(om); i++) {
+        rc = os_mbuf_copydata(om, i, 1, &u8);
+        assert(rc == 0);
+        if (u8 == 0 || u8 > 127) {
+            BHD_LOG(DEBUG, "[%s:%d] INVALID STRING; [%d]=0x%02x\n", file, line,
+                    i, u8);
+        }
+    }
+}
+
+#define BLEHOSTD_STR_VALIDATE(om) \
+    (blehostd_str_validate((om), __FILE__, __LINE__))
+
 static int
 blehostd_enqueue_one(void)
 {
@@ -254,6 +282,7 @@ blehostd_enqueue_one(void)
         blehostd_packet_len = 0;
     }
 
+    BLEHOSTD_STR_VALIDATE(om);
     rc = os_mqueue_put(&blehostd_req_mq, os_eventq_dflt_get(), om);
     assert(rc == 0);
 
@@ -274,6 +303,9 @@ blehostd_recv_packet(void)
         os_time_delay(1);
         return -1;
     }
+
+    BHD_LOG(DEBUG, "Rxed UDS data:\n");
+    blehostd_log_mbuf(om);
 
     if (blehostd_packet == NULL) {
         /* Beginning of packet. */
