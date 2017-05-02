@@ -55,7 +55,7 @@ static const struct bhd_req_dispatch_entry {
     { BHD_MSG_TYPE_SCAN,                bhd_scan_req_run },
     { BHD_MSG_TYPE_SCAN_CANCEL,         bhd_scan_cancel_req_run },
     { BHD_MSG_TYPE_SET_PREFERRED_MTU,   bhd_set_preferred_mtu_req_run },
-    { BHD_MSG_TYPE_SECURITY_INITIATE,   bhd_security_initiate_req_run },
+    { BHD_MSG_TYPE_ENC_INITIATE,        bhd_security_initiate_req_run },
     { BHD_MSG_TYPE_CONN_FIND,           bhd_conn_find_req_run },
 
     { -1 },
@@ -102,7 +102,7 @@ static const struct bhd_rsp_dispatch_entry {
     { BHD_MSG_TYPE_SCAN,                bhd_scan_rsp_enc },
     { BHD_MSG_TYPE_SCAN_CANCEL,         bhd_scan_cancel_rsp_enc },
     { BHD_MSG_TYPE_SET_PREFERRED_MTU,   bhd_set_preferred_mtu_rsp_enc },
-    { BHD_MSG_TYPE_SECURITY_INITIATE,   bhd_security_initiate_rsp_enc },
+    { BHD_MSG_TYPE_ENC_INITIATE,        bhd_security_initiate_rsp_enc },
     { BHD_MSG_TYPE_CONN_FIND,           bhd_conn_find_rsp_enc },
 
     { -1 },
@@ -547,7 +547,7 @@ bhd_write_req_dec(cJSON *parent, uint8_t *attr_buf, int attr_buf_sz,
  */
 static int
 bhd_write_req_run(cJSON *parent,
-                     struct bhd_req *req, struct bhd_rsp *rsp)
+                  struct bhd_req *req, struct bhd_rsp *rsp)
 {
     uint8_t buf[BLE_ATT_ATTR_MAX_LEN + 3];
     int rc;
@@ -567,7 +567,7 @@ bhd_write_req_run(cJSON *parent,
  */
 static int
 bhd_write_cmd_req_run(cJSON *parent,
-                         struct bhd_req *req, struct bhd_rsp *rsp)
+                      struct bhd_req *req, struct bhd_rsp *rsp)
 {
     uint8_t buf[BLE_ATT_ATTR_MAX_LEN + 3];
     int rc;
@@ -739,7 +739,7 @@ bhd_set_preferred_mtu_req_run(cJSON *parent,
 
 static int
 bhd_security_initiate_req_run(cJSON *parent,
-                              struct bhd_req *req, struct bhd_rsp *rsp)
+                         struct bhd_req *req, struct bhd_rsp *rsp)
 {
     int rc;
 
@@ -782,13 +782,11 @@ bhd_req_dec(const char *json, struct bhd_rsp *out_rsp)
     cJSON *root;
     int rc;
 
-    /* Assume failure. */
     out_rsp->hdr.op = BHD_MSG_OP_RSP;
-    out_rsp->hdr.type = BHD_MSG_TYPE_ERR;
 
     root = cJSON_Parse(json);
     if (root == NULL) {
-        bhd_err_fill(&out_rsp->err, SYS_ERANGE, "invalid json");
+        bhd_err_build(out_rsp, SYS_ERANGE, "invalid json");
         return 1;
     }
 
@@ -800,13 +798,13 @@ bhd_req_dec(const char *json, struct bhd_rsp *out_rsp)
     out_rsp->hdr.seq = req.hdr.seq;
 
     if (req.hdr.op != BHD_MSG_OP_REQ) {
-        bhd_err_fill(&out_rsp->err, SYS_ERANGE, "invalid op");
+        bhd_err_build(out_rsp, SYS_ERANGE, "invalid op");
         return 1;
     }
 
     req_cb = bhd_req_dispatch_find(req.hdr.type);
     if (req_cb == NULL) {
-        bhd_err_fill(&out_rsp->err, SYS_ERANGE, "invalid type");
+        bhd_err_build(out_rsp, SYS_ERANGE, "invalid type");
         return 1;
     }
 

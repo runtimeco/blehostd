@@ -26,7 +26,7 @@
 #define BHD_MSG_TYPE_SCAN                   15
 #define BHD_MSG_TYPE_SCAN_CANCEL            16
 #define BHD_MSG_TYPE_SET_PREFERRED_MTU      17
-#define BHD_MSG_TYPE_SECURITY_INITIATE      18
+#define BHD_MSG_TYPE_ENC_INITIATE           18
 #define BHD_MSG_TYPE_CONN_FIND              19
 
 #define BHD_MSG_TYPE_SYNC_EVT               2049
