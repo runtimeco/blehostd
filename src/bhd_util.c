@@ -408,7 +408,7 @@ bhd_json_uuid(const cJSON *parent, const char *name, ble_uuid_any_t *dst,
     srcptr = valstr;
     dstptr = dst->u128.value + 15;
     i = 0;
-    while (i < 37) {
+    while (i < 36) {
         switch (i) {
         case 8:
         case 13:
