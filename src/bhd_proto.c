@@ -784,11 +784,13 @@ bhd_req_dec(const char *json, struct bhd_rsp *out_rsp)
 
     out_rsp->hdr.op = BHD_MSG_OP_RSP;
 
+    BLEHOSTD_CMD_VALIDATE(json);
     root = cJSON_Parse(json);
     if (root == NULL) {
         bhd_err_build(out_rsp, SYS_ERANGE, "invalid json");
         return 1;
     }
+    BLEHOSTD_CMD_VALIDATE(json);
 
     err = bhd_msg_hdr_dec(root, &req.hdr);
     if (err.status != 0) {

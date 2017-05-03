@@ -55,4 +55,13 @@ void blehostd_logf(const char *fmt, ...);
         }                                                       \
     } while (0)
 
+void blehostd_cmd_validate(const char *cmd, char *file, int line);
+void blehostd_cmd_validate_om(const struct os_mbuf *om, char *file, int line);
+
+#define BLEHOSTD_CMD_VALIDATE(cmd) \
+    (blehostd_cmd_validate((cmd), __FILE__, __LINE__))
+
+#define BLEHOSTD_CMD_VALIDATE_OM(om) \
+    (blehostd_cmd_validate_om((om), __FILE__, __LINE__))
+
 #endif
