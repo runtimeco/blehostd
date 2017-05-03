@@ -796,6 +796,8 @@ bhd_req_dec(const char *json, struct bhd_rsp *out_rsp)
 
     err = bhd_msg_hdr_dec(root, &req.hdr);
     if (err.status != 0) {
+        BHD_LOG(DEBUG, "FAILED to decode BHD header; json=%s\n", json);
+        out_rsp->hdr.type = BHD_MSG_TYPE_ERR;
         out_rsp->err = err;
         return 1;
     }
