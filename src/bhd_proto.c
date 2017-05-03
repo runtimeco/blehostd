@@ -245,6 +245,8 @@ bhd_msg_hdr_enc(cJSON *parent, const struct bhd_msg_hdr *hdr)
 {
     cJSON_AddStringToObject(parent, "op", bhd_op_rev_parse(hdr->op));
     cJSON_AddStringToObject(parent, "type", bhd_type_rev_parse(hdr->type));
+
+    BHD_LOG(DEBUG, "encoding seq=%lu\n", (unsigned long)hdr->seq);
     bhd_json_add_int(parent, "seq", hdr->seq);
 
     return 0;

@@ -465,6 +465,7 @@ bhd_open_log(char *argv0)
 int
 main(int argc, char **argv)
 {
+    struct cJSON_Hooks cjson_hooks;
     sigset_t sigset;
     int rc;
 
@@ -508,6 +509,10 @@ main(int argc, char **argv)
 #endif
 
     sysinit();
+
+    cjson_hooks.malloc_fn = malloc_success;
+    cjson_hooks.free_fn = free;
+    cJSON_InitHooks(&cjson_hooks);
 
     rc = os_mqueue_init(&blehostd_req_mq, blehostd_process_req_mq, NULL);
     assert(rc == 0);

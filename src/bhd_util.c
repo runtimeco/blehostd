@@ -537,7 +537,12 @@ bhd_json_add_addr(cJSON *parent, const char *name, const uint8_t *addr)
 void
 bhd_json_add_int(cJSON *parent, const char *name, int64_t val)
 {
-    cJSON_AddItemToObject(parent, name, cJSON_CreateNumber(val));
+    cJSON *item;
+
+    item = cJSON_CreateNumber(val);
+    BHD_LOG(DEBUG, "bhd_json_add_int(); item=%p type=%d\n", item, item->type);
+
+    cJSON_AddItemToObject(parent, name, item);
 }
 
 
@@ -630,7 +635,7 @@ malloc_success(size_t num_bytes)
     void *v;
 
     v = malloc(num_bytes);
-    assert(v != NULL);
+    assert(v != NULL && "malloc returned null");
 
     return v;
 }
