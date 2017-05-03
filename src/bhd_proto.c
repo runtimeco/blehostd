@@ -1194,7 +1194,11 @@ bhd_scan_evt_enc(cJSON *parent, const struct bhd_evt *evt)
     bhd_json_add_addr_type(parent, "addr_type", evt->scan.addr.type);
     bhd_json_add_addr(parent, "addr", evt->scan.addr.val);
     bhd_json_add_int(parent, "rssi", evt->scan.rssi);
-    bhd_json_add_bytes(parent, "data", evt->scan.data, evt->scan.length_data);
+
+    if (evt->scan.length_data > 0) {
+        bhd_json_add_bytes(parent, "data", evt->scan.data,
+                           evt->scan.length_data);
+    }
 
     if (ble_addr_cmp(&evt->scan.direct_addr, BLE_ADDR_ANY) != 0) {
         bhd_json_add_addr_type(parent, "direct_addr_type",

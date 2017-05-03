@@ -451,6 +451,8 @@ bhd_json_create_byte_string(const uint8_t *data, int len)
     char *buf;
     int max_len;
 
+    assert(len > 0);
+
     max_len = len * 5; /* 0xXX: */
 
     buf = malloc_success(max_len);
