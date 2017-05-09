@@ -156,11 +156,8 @@ void cJSON_Delete(cJSON *c)
 /* Parse the input text to generate a number, and populate the result into item. */
 static const char *parse_number(cJSON *item, const char *num)
 {
-    double n = 0;
-    double sign = 1;
-    double scale = 0;
-    int subscale = 0;
-    int signsubscale = 1;
+    intmax_t n = 0;
+    int sign = 1;
 
     /* Has sign? */
     if (*num == '-')
@@ -178,46 +175,12 @@ static const char *parse_number(cJSON *item, const char *num)
     {
         do
         {
-            n = (n * 10.0) + (*num++ - '0');
+            n = (n * 10) + (*num++ - '0');
         }
         while ((*num >= '0') && (*num<='9'));
     }
-    /* Fractional part? */
-    if ((*num == '.') && (num[1] >= '0') && (num[1] <= '9'))
-    {
-        num++;
-        do
-        {
-            n = (n  *10.0) + (*num++ - '0');
-            scale--;
-        } while ((*num >= '0') && (*num <= '9'));
-    }
-    /* Exponent? */
-    if ((*num == 'e') || (*num == 'E'))
-    {
-        num++;
-        /* With sign? */
-        if (*num == '+')
-        {
-            num++;
-        }
-        else if (*num == '-')
-        {
-            signsubscale = -1;
-            num++;
-        }
-        /* Number? */
-        while ((*num>='0') && (*num<='9'))
-        {
-            subscale = (subscale * 10) + (*num++ - '0');
-        }
-    }
 
-    /* number = +/- number.fraction * 10^+/- exponent */
-    n = sign * n * pow(10.0, (scale + subscale * signsubscale));
-
-    item->valuedouble = n;
-    item->valueint = (int)n;
+    item->valueint = sign * n;
     item->type = cJSON_Number;
 
     return num;
@@ -309,7 +272,7 @@ static int update(const printbuffer *p)
 static char *print_number(const cJSON *item, printbuffer *p)
 {
     char *str = NULL;
-    double d = item->valuedouble;
+    intmax_t d = item->valueint;
     /* special case for 0. */
     if (d == 0)
     {
@@ -326,57 +289,21 @@ static char *print_number(const cJSON *item, printbuffer *p)
             strcpy(str,"0");
         }
     }
-    /* value is an int */
-    else if ((fabs(((double)item->valueint) - d) <= DBL_EPSILON) && (d <= INT_MAX) && (d >= INT_MIN))
+
+    if (p)
     {
-        if (p)
-        {
-            str = ensure(p, 21);
-        }
-        else
-        {
-            /* 2^64+1 can be represented in 21 chars. */
-            str = (char*)cJSON_malloc(21);
-        }
-        if (str)
-        {
-            sprintf(str, "%d", item->valueint);
-        }
+        str = ensure(p, 21);
     }
-    /* value is a floating point number */
     else
     {
-        if (p)
-        {
-            /* This is a nice tradeoff. */
-            str = ensure(p, 64);
-        }
-        else
-        {
-            /* This is a nice tradeoff. */
-            str=(char*)cJSON_malloc(64);
-        }
-        if (str)
-        {
-            /* This checks for NaN and Infinity */
-            if ((d * 0) != 0)
-            {
-                sprintf(str, "null");
-            }
-            else if ((fabs(floor(d) - d) <= DBL_EPSILON) && (fabs(d) < 1.0e60))
-            {
-                sprintf(str, "%.0f", d);
-            }
-            else if ((fabs(d) < 1.0e-6) || (fabs(d) > 1.0e9))
-            {
-                sprintf(str, "%e", d);
-            }
-            else
-            {
-                sprintf(str, "%f", d);
-            }
-        }
+        /* 2^64+1 can be represented in 21 chars. */
+        str = (char*)cJSON_malloc(21);
     }
+    if (str)
+    {
+        sprintf(str, "%lld", (long long)item->valueint);
+    }
+
     return str;
 }
 
@@ -1987,14 +1914,13 @@ cJSON *cJSON_CreateBool(cjbool b)
     return item;
 }
 
-cJSON *cJSON_CreateNumber(double num)
+cJSON *cJSON_CreateNumber(intmax_t num)
 {
     cJSON *item = cJSON_New_Item();
     if(item)
     {
         item->type = cJSON_Number;
-        item->valuedouble = num;
-        item->valueint = (int)num;
+        item->valueint = num;
     }
 
     return item;
@@ -2057,7 +1983,7 @@ cJSON *cJSON_CreateObject(void)
 }
 
 /* Create Arrays: */
-cJSON *cJSON_CreateIntArray(const int *numbers, int count)
+cJSON *cJSON_CreateIntArray(const intmax_t *numbers, int count)
 {
     int i = 0;
     cJSON *n = NULL;
@@ -2067,62 +1993,6 @@ cJSON *cJSON_CreateIntArray(const int *numbers, int count)
     {
         n = cJSON_CreateNumber(numbers[i]);
         if (!n)
-        {
-            cJSON_Delete(a);
-            return NULL;
-        }
-        if(!i)
-        {
-            a->child = n;
-        }
-        else
-        {
-            suffix_object(p, n);
-        }
-        p = n;
-    }
-
-    return a;
-}
-
-cJSON *cJSON_CreateFloatArray(const float *numbers, int count)
-{
-    int i = 0;
-    cJSON *n = NULL;
-    cJSON *p = NULL;
-    cJSON *a = cJSON_CreateArray();
-    for(i = 0; a && (i < count); i++)
-    {
-        n = cJSON_CreateNumber(numbers[i]);
-        if(!n)
-        {
-            cJSON_Delete(a);
-            return NULL;
-        }
-        if(!i)
-        {
-            a->child = n;
-        }
-        else
-        {
-            suffix_object(p, n);
-        }
-        p = n;
-    }
-
-    return a;
-}
-
-cJSON *cJSON_CreateDoubleArray(const double *numbers, int count)
-{
-    int i = 0;
-    cJSON *n = NULL;
-    cJSON *p = NULL;
-    cJSON *a = cJSON_CreateArray();
-    for(i = 0;a && (i < count); i++)
-    {
-        n = cJSON_CreateNumber(numbers[i]);
-        if(!n)
         {
             cJSON_Delete(a);
             return NULL;
@@ -2191,7 +2061,6 @@ cJSON *cJSON_Duplicate(const cJSON *item, cjbool recurse)
     /* Copy over all vars */
     newitem->type = item->type & (~cJSON_IsReference);
     newitem->valueint = item->valueint;
-    newitem->valuedouble = item->valuedouble;
     if (item->valuestring)
     {
         newitem->valuestring = cJSON_strdup(item->valuestring);
