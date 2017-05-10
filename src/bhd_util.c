@@ -3,6 +3,7 @@
 #include "blehostd.h"
 #include "parse.h"
 #include "bhd_proto.h"
+#include "bhd_util.h"
 #include "defs/error.h"
 #include "nimble/ble.h"
 #include "nimble/hci_common.h"
@@ -452,8 +453,7 @@ bhd_json_create_byte_string(const uint8_t *data, int len)
 
     max_len = len * 5; /* 0xXX: */
 
-    buf = malloc(max_len);
-    assert(buf != NULL);
+    buf = malloc_success(max_len);
 
     bhd_hex_str(buf, max_len, NULL, data, len);
     item = cJSON_CreateString(buf);
