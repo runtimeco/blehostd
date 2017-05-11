@@ -36,6 +36,7 @@ static const struct bhd_kv_str_int bhd_type_map[] = {
     { "set_preferred_mtu",  BHD_MSG_TYPE_SET_PREFERRED_MTU },
     { "enc_initiate",       BHD_MSG_TYPE_ENC_INITIATE },
     { "conn_find",          BHD_MSG_TYPE_CONN_FIND },
+    { "reset",              BHD_MSG_TYPE_RESET },
 
     { "sync_evt",       BHD_MSG_TYPE_SYNC_EVT },
     { "connect_evt",    BHD_MSG_TYPE_CONNECT_EVT },

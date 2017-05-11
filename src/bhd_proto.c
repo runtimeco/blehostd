@@ -34,6 +34,7 @@ static bhd_req_run_fn bhd_scan_cancel_req_run;
 static bhd_req_run_fn bhd_set_preferred_mtu_req_run;
 static bhd_req_run_fn bhd_security_initiate_req_run;
 static bhd_req_run_fn bhd_conn_find_req_run;
+static bhd_req_run_fn bhd_reset_req_run;
 
 static const struct bhd_req_dispatch_entry {
     int req_type;
@@ -57,6 +58,7 @@ static const struct bhd_req_dispatch_entry {
     { BHD_MSG_TYPE_SET_PREFERRED_MTU,   bhd_set_preferred_mtu_req_run },
     { BHD_MSG_TYPE_ENC_INITIATE,        bhd_security_initiate_req_run },
     { BHD_MSG_TYPE_CONN_FIND,           bhd_conn_find_req_run },
+    { BHD_MSG_TYPE_RESET,               bhd_reset_req_run },
 
     { -1 },
 };
@@ -80,6 +82,7 @@ static bhd_subrsp_enc_fn bhd_scan_cancel_rsp_enc;
 static bhd_subrsp_enc_fn bhd_set_preferred_mtu_rsp_enc;
 static bhd_subrsp_enc_fn bhd_security_initiate_rsp_enc;
 static bhd_subrsp_enc_fn bhd_conn_find_rsp_enc;
+static bhd_subrsp_enc_fn bhd_reset_rsp_enc;
 
 static const struct bhd_rsp_dispatch_entry {
     int rsp_type;
@@ -104,6 +107,7 @@ static const struct bhd_rsp_dispatch_entry {
     { BHD_MSG_TYPE_SET_PREFERRED_MTU,   bhd_set_preferred_mtu_rsp_enc },
     { BHD_MSG_TYPE_ENC_INITIATE,        bhd_security_initiate_rsp_enc },
     { BHD_MSG_TYPE_CONN_FIND,           bhd_conn_find_rsp_enc },
+    { BHD_MSG_TYPE_RESET,               bhd_reset_rsp_enc },
 
     { -1 },
 };
@@ -365,7 +369,7 @@ bhd_connect_req_run(cJSON *parent, struct bhd_req *req, struct bhd_rsp *rsp)
  */
 static int
 bhd_terminate_req_run(cJSON *parent,
-                         struct bhd_req *req, struct bhd_rsp *rsp)
+                      struct bhd_req *req, struct bhd_rsp *rsp)
 {
     int rc;
 
@@ -393,7 +397,7 @@ bhd_terminate_req_run(cJSON *parent,
  */
 static int
 bhd_disc_all_svcs_req_run(cJSON *parent,
-                             struct bhd_req *req, struct bhd_rsp *rsp)
+                          struct bhd_req *req, struct bhd_rsp *rsp)
 {
     int rc;
 
@@ -414,7 +418,7 @@ bhd_disc_all_svcs_req_run(cJSON *parent,
  */
 static int
 bhd_disc_svc_uuid_req_run(cJSON *parent,
-                             struct bhd_req *req, struct bhd_rsp *rsp)
+                          struct bhd_req *req, struct bhd_rsp *rsp)
 {
     int rc;
 
@@ -441,7 +445,7 @@ bhd_disc_svc_uuid_req_run(cJSON *parent,
  */
 static int
 bhd_disc_all_chrs_req_run(cJSON *parent,
-                             struct bhd_req *req, struct bhd_rsp *rsp)
+                          struct bhd_req *req, struct bhd_rsp *rsp)
 {
     int rc;
 
@@ -476,7 +480,7 @@ bhd_disc_all_chrs_req_run(cJSON *parent,
  */
 static int
 bhd_disc_chr_uuid_req_run(cJSON *parent,
-                             struct bhd_req *req, struct bhd_rsp *rsp)
+                          struct bhd_req *req, struct bhd_rsp *rsp)
 {
     int rc;
 
@@ -771,6 +775,14 @@ bhd_conn_find_req_run(cJSON *parent,
     return 1;
 }
 
+static int
+bhd_reset_req_run(cJSON *parent,
+                  struct bhd_req *req, struct bhd_rsp *rsp)
+{
+    ble_hs_sched_reset(0);
+    return 1;
+}
+
 /**
  * @return                      1 if a response should be sent;
  *                              0 for no response.
@@ -1027,6 +1039,12 @@ bhd_conn_find_rsp_enc(cJSON *parent, const struct bhd_rsp *rsp)
     bhd_json_add_bool(parent, "bonded", rsp->conn_find.bonded);
     bhd_json_add_int(parent, "key_size", rsp->conn_find.key_size);
 
+    return 0;
+}
+
+static int
+bhd_reset_rsp_enc(cJSON *parent, const struct bhd_rsp *rsp)
+{
     return 0;
 }
 

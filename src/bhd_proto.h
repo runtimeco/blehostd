@@ -28,6 +28,7 @@
 #define BHD_MSG_TYPE_SET_PREFERRED_MTU      17
 #define BHD_MSG_TYPE_ENC_INITIATE           18
 #define BHD_MSG_TYPE_CONN_FIND              19
+#define BHD_MSG_TYPE_RESET                  20
 
 #define BHD_MSG_TYPE_SYNC_EVT               2049
 #define BHD_MSG_TYPE_CONNECT_EVT            2050
