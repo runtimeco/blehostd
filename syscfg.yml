@@ -18,3 +18,6 @@ syscfg.vals:
     MSYS_1_BLOCK_COUNT: 1000
     BLE_ACL_BUF_COUNT: 1000
     BLE_MAX_CONNECTIONS: 64
+
+    # More stability; less correctness.  This is a long-running process.
+    MCU_NATIVE_USE_SIGNALS: 0
