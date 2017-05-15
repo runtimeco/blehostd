@@ -43,8 +43,6 @@ static const char *blehostd_dev_filename;
 static struct os_mbuf *blehostd_packet;
 static uint16_t blehostd_packet_len;
 
-struct os_mbuf *blehostd_last_cmd;
-
 void
 blehostd_logf(const char *fmt, ...)
 {
@@ -97,23 +95,6 @@ blehostd_log_mbuf(const struct os_mbuf *om)
         rc = os_mbuf_copydata(om, i, 1, &u8);
         assert(rc == 0);
         BHD_LOG(DEBUG, "%s0x%02x", i == 0 ? "" : " ", u8);
-    }
-    BHD_LOG(DEBUG, "\n");
-}
-
-static void
-blehostd_log_flat(const void *v, int len)
-{
-    const uint8_t *u8p;
-    int i;
-
-    if (MYNEWT_VAL(LOG_LEVEL) > LOG_LEVEL_DEBUG) {
-        return;
-    }
-
-    u8p = v;
-    for (i = 0; i < len; i++) {
-        BHD_LOG(DEBUG, "%s0x%02x", i == 0 ? "" : " ", u8p[i]);
     }
     BHD_LOG(DEBUG, "\n");
 }
@@ -230,51 +211,6 @@ blehostd_connect(const char *sock_path)
     return 0;
 }
 
-void
-blehostd_cmd_validate(const char *cmd, char *file, int line)
-{
-    uint8_t u8;
-    int rc;
-    int i;
-
-    if (blehostd_last_cmd == NULL) {
-        return;
-    }
-
-    for (i = 0; i < OS_MBUF_PKTLEN(blehostd_last_cmd); i++) {
-        rc = os_mbuf_copydata(blehostd_last_cmd, i, 1, &u8);
-        assert(rc == 0);
-        if (cmd[i] != u8) {
-            BHD_LOG(DEBUG, "[%s:%d] COMMANDS DIFFER AT BYTE %d; "
-                           "(0x%02x != 0x%02x)\n", file, line, i,
-                    cmd[i], u8);
-
-            BHD_LOG(DEBUG, "ORIGINAL COMMAND:\n");
-            blehostd_log_mbuf(blehostd_last_cmd);
-
-            BHD_LOG(DEBUG, "CURRENT COMMAND:\n");
-            blehostd_log_flat(cmd, i);
-
-            break;
-        }
-    }
-}
-
-void
-blehostd_cmd_validate_om(const struct os_mbuf *om, char *file, int line)
-{
-    uint8_t *buf;
-    int rc;
-
-    buf = malloc_success(OS_MBUF_PKTLEN(om));
-    rc = ble_hs_mbuf_to_flat(om, buf, OS_MBUF_PKTLEN(om), NULL);
-    assert(rc == 0);
-
-    blehostd_cmd_validate((const char *)buf, file, line);
-
-    free(buf);
-}
-
 static int
 blehostd_enqueue_one(void)
 {
@@ -325,11 +261,6 @@ blehostd_enqueue_one(void)
         os_mbuf_adj(blehostd_packet, blehostd_packet_len);
         blehostd_packet_len = 0;
     }
-
-    os_mbuf_free_chain(blehostd_last_cmd);
-    blehostd_last_cmd = os_mbuf_dup(om);
-    assert(blehostd_last_cmd != NULL);
-    BLEHOSTD_CMD_VALIDATE_OM(om);
 
     rc = os_mqueue_put(&blehostd_req_mq, os_eventq_dflt_get(), om);
     assert(rc == 0);
@@ -396,11 +327,9 @@ blehostd_process_req(struct os_mbuf *om)
     int send_rsp;
     int rc;
 
-    BLEHOSTD_CMD_VALIDATE_OM(om);
-
     json = malloc_success(OS_MBUF_PKTLEN(om) + 1);
 
-    BHD_LOG(DEBUG, "Received %d bytes:\n", OS_MBUF_PKTLEN(om));
+    BHD_LOG(DEBUG, "Received %d bytes\n", OS_MBUF_PKTLEN(om));
     rc = os_mbuf_copydata(om, 0, OS_MBUF_PKTLEN(om), json);
     if (rc != 0) {
         BHD_LOG(ERROR, "os_mbuf_copydata() failed: rc=%d\n", rc);
@@ -409,7 +338,6 @@ blehostd_process_req(struct os_mbuf *om)
 
     json[OS_MBUF_PKTLEN(om)] = '\0';
     BHD_LOG(DEBUG, "Received JSON request:\n%s\n", json);
-    BLEHOSTD_CMD_VALIDATE(json);
 
     send_rsp = bhd_req_dec(json, &rsp);
     if (send_rsp) {

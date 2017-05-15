@@ -250,7 +250,6 @@ bhd_msg_hdr_enc(cJSON *parent, const struct bhd_msg_hdr *hdr)
     cJSON_AddStringToObject(parent, "op", bhd_op_rev_parse(hdr->op));
     cJSON_AddStringToObject(parent, "type", bhd_type_rev_parse(hdr->type));
 
-    BHD_LOG(DEBUG, "encoding seq=%lu\n", (unsigned long)hdr->seq);
     bhd_json_add_int(parent, "seq", hdr->seq);
 
     return 0;
@@ -798,17 +797,15 @@ bhd_req_dec(const char *json, struct bhd_rsp *out_rsp)
 
     out_rsp->hdr.op = BHD_MSG_OP_RSP;
 
-    BLEHOSTD_CMD_VALIDATE(json);
     root = cJSON_Parse(json);
     if (root == NULL) {
         bhd_err_build(out_rsp, SYS_ERANGE, "invalid json");
         return 1;
     }
-    BLEHOSTD_CMD_VALIDATE(json);
 
     err = bhd_msg_hdr_dec(root, &req.hdr);
     if (err.status != 0) {
-        BHD_LOG(DEBUG, "FAILED to decode BHD header; json=%s\n", json);
+        BHD_LOG(DEBUG, "failed to decode BHD header; json=%s\n", json);
         out_rsp->hdr.type = BHD_MSG_TYPE_ERR;
         out_rsp->err = err;
         return 1;
