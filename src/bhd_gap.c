@@ -115,16 +115,19 @@ bhd_gap_send_scan_evt(const struct ble_gap_disc_desc *desc, bhd_seq_t seq)
         for (i = 0; i < fields.num_uuids16; i++) {
             evt.scan.data_uuids16[i] = fields.uuids16[i].value;
         }
+        evt.scan.data_num_uuids16 = fields.num_uuids16;
         evt.scan.data_uuids16_is_complete = fields.uuids16_is_complete;
 
         for (i = 0; i < fields.num_uuids32; i++) {
             evt.scan.data_uuids32[i] = fields.uuids32[i].value;
         }
+        evt.scan.data_num_uuids32 = fields.num_uuids32;
         evt.scan.data_uuids32_is_complete = fields.uuids32_is_complete;
 
         for (i = 0; i < fields.num_uuids128; i++) {
             memcpy(evt.scan.data_uuids128[i], fields.uuids128[i].value, 16);
         }
+        evt.scan.data_num_uuids128 = fields.num_uuids128;
         evt.scan.data_uuids128_is_complete = fields.uuids128_is_complete;
 
         if (fields.name != NULL) {
