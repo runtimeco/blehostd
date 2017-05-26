@@ -433,3 +433,48 @@ bhd_gap_conn_find(const struct bhd_req *req, struct bhd_rsp *out_rsp)
     out_rsp->conn_find.bonded = desc.sec_state.bonded;
     out_rsp->conn_find.key_size = desc.sec_state.key_size;
 }
+
+void
+bhd_gap_adv_start(const struct bhd_req *req, struct bhd_rsp *out_rsp)
+{
+    struct ble_gap_adv_params adv_params;
+
+    adv_params.conn_mode = req->adv_start.conn_mode;
+    adv_params.disc_mode = req->adv_start.disc_mode;
+    adv_params.itvl_min = req->adv_start.itvl_min;
+    adv_params.itvl_max = req->adv_start.itvl_max;
+    adv_params.channel_map = req->adv_start.channel_map;
+    adv_params.filter_policy = req->adv_start.filter_policy;
+    adv_params.high_duty_cycle = req->adv_start.high_duty_cycle;
+
+    out_rsp->adv_start.status = ble_gap_adv_start(req->adv_start.own_addr_type,
+                                                  &req->adv_start.peer_addr,
+                                                  req->adv_start.duration_ms,
+                                                  &adv_params,
+                                                  bhd_gap_event,
+                                                  bhd_seq_arg(req->hdr.seq));
+}
+
+void
+bhd_gap_adv_stop(const struct bhd_req *req, struct bhd_rsp *out_rsp)
+{
+    out_rsp->adv_stop.status = ble_gap_adv_stop();
+}
+
+void
+bhd_gap_adv_set_data(const struct bhd_req *req, struct bhd_rsp *out_rsp)
+{
+    out_rsp->adv_set_data.status =
+        ble_gap_adv_set_data(req->adv_set_data.data,
+                             req->adv_set_data.data_len);
+
+}
+
+void
+bhd_gap_adv_rsp_set_data(const struct bhd_req *req, struct bhd_rsp *out_rsp)
+{
+    out_rsp->adv_rsp_set_data.status =
+        ble_gap_adv_rsp_set_data(req->adv_rsp_set_data.data,
+                                 req->adv_rsp_set_data.data_len);
+
+}

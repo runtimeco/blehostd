@@ -1,6 +1,10 @@
 #ifndef H_BHD_UTIL_
 #define H_BHD_UTIL_
 
+#include "cjson/cJSON.h"
+
+typedef int bhd_json_fn(const cJSON *item, int *rc, void *arg);
+
 void *malloc_success(size_t num_bytes);
 
 bhd_seq_t bhd_next_evt_seq(void);
@@ -15,20 +19,52 @@ int bhd_scan_filter_policy_parse(const char *scan_filter_policy_str);
 const char *bhd_scan_filter_policy_rev_parse(int scan_filter_policy);
 int bhd_adv_event_type_parse(const char *adv_event_type_str);
 const char *bhd_adv_event_type_rev_parse(int adv_event_type);
+int bhd_adv_conn_mode_parse(const char *conn_mode_str);
+const char *bhd_adv_conn_mode_rev_parse(int conn_mode);
+int bhd_adv_disc_mode_parse(const char *disc_mode_str);
+const char *bhd_adv_disc_mode_rev_parse(int disc_mode);
+int bhd_adv_filter_policy_parse(const char *filter_policy_str);
+const char *bhd_adv_filter_policy_rev_parse(int filter_policy);
 
 int bhd_send_mtu_changed(uint32_t seq, uint16_t conn_handle, int status,
                          uint16_t mtu);
 int bhd_send_sync_evt(uint32_t seq);
 
+long long int bhd_process_json_int(const cJSON *item, int *rc);
 long long int bhd_json_int(const cJSON *parent, const char *name, int *rc);
+long long int bhd_process_json_int_bounds(const cJSON *item,
+                                          long long int minval,
+                                          long long int maxval,
+                                          int *rc);
+uint8_t *bhd_process_json_hex_string(const cJSON *item, int max_len,
+                                     uint8_t *dst, int *out_dst_len, int *rc);
+uint8_t * bhd_process_json_addr(const cJSON *item, uint8_t *dst, int *rc);
 long long int bhd_json_int_bounds(const cJSON *parent, const char *name,
                                   long long int minval, long long int maxval,
                                   int *rc);
 int bhd_json_bool(const cJSON *parent, const char *name, int *rc);
 char *bhd_json_string(const cJSON *parent, const char *name, int *rc);
+cJSON *bhd_json_arr(const cJSON *parent, const char *name, int *rc);
+int ble_json_arr_llong(const cJSON *parent, const char *name, int max_elems,
+                       long long int minval, long long int maxval,
+                       long long int *out_arr, int *out_num_elems);
+int ble_json_arr_uint16(const cJSON *parent, const char *name, int max_elems,
+                        uint16_t minval, uint16_t maxval,
+                        uint16_t *out_arr, int *out_num_elems);
+int ble_json_arr_uint32(const cJSON *parent, const char *name, int max_elems,
+                        uint32_t minval, uint32_t maxval,
+                        uint32_t *out_arr, int *out_num_elems);
+int ble_json_arr_hex_string(const cJSON *parent, const char *name, int elem_sz,
+                            int max_elems, uint8_t *out_arr,
+                            int *out_num_elems);
+int ble_json_arr_addr(const cJSON *parent, const char *name,
+                      int max_elems, uint8_t *out_arr, int *out_num_elems);
 int bhd_json_addr_type(const cJSON *parent, const char *name, int *rc);
 int bhd_json_scan_filter_policy(const cJSON *parent, const char *name,
                                 int *rc);
+int bhd_json_adv_conn_mode(const cJSON *parent, const char *name, int *rc);
+int bhd_json_adv_disc_mode(const cJSON *parent, const char *name, int *rc);
+int bhd_json_adv_filter_policy(const cJSON *parent, const char *name, int *rc);
 uint8_t *bhd_json_hex_string(const cJSON *parent, const char *name,
                              int max_len, uint8_t *dst, int *out_dst_len,
                              int *rc);

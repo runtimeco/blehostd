@@ -29,6 +29,11 @@
 #define BHD_MSG_TYPE_ENC_INITIATE           18
 #define BHD_MSG_TYPE_CONN_FIND              19
 #define BHD_MSG_TYPE_RESET                  20
+#define BHD_MSG_TYPE_ADV_START              21
+#define BHD_MSG_TYPE_ADV_STOP               22
+#define BHD_MSG_TYPE_ADV_SET_DATA           23
+#define BHD_MSG_TYPE_ADV_RSP_SET_DATA       24
+#define BHD_MSG_TYPE_ADV_FIELDS             25
 
 #define BHD_MSG_TYPE_SYNC_EVT               2049
 #define BHD_MSG_TYPE_CONNECT_EVT            2050
@@ -69,8 +74,6 @@ struct bhd_connect_req {
     uint16_t supervision_timeout;
     uint16_t min_ce_len;
     uint16_t max_ce_len;
-
-    /* XXX: Idle timeout. */
 };
 
 struct bhd_terminate_req {
@@ -142,6 +145,95 @@ struct bhd_conn_find_req {
     uint16_t conn_handle;
 };
 
+struct bhd_adv_start_req {
+    uint8_t own_addr_type;
+    ble_addr_t peer_addr;
+    int32_t duration_ms;
+    uint8_t conn_mode;
+    uint8_t disc_mode;
+    uint16_t itvl_min;
+    uint16_t itvl_max;
+    uint8_t channel_map;
+    uint8_t filter_policy;
+    uint8_t high_duty_cycle:1;
+};
+
+struct bhd_adv_set_data_req {
+    uint8_t data[BLE_HCI_MAX_ADV_DATA_LEN];
+    int data_len;
+};
+
+struct bhd_adv_rsp_set_data_req {
+    uint8_t data[BLE_HCI_MAX_ADV_DATA_LEN];
+    int data_len;
+};
+
+struct bhd_adv_fields_req {
+    /*** 0x01 - Flags. */
+    uint8_t flags;
+
+    /*** 0x02,0x03 - 16-bit service class UUIDs. */
+    uint16_t uuids16[BLE_HS_ADV_MAX_FIELD_SZ / 2];
+    uint8_t num_uuids16;
+    unsigned uuids16_is_complete:1;
+
+    /*** 0x04,0x05 - 32-bit service class UUIDs. */
+    uint32_t uuids32[BLE_HS_ADV_MAX_FIELD_SZ / 4];
+    uint8_t num_uuids32;
+    unsigned uuids32_is_complete:1;
+
+    /*** 0x06,0x07 - 128-bit service class UUIDs. */
+    uint8_t uuids128[BLE_HS_ADV_MAX_FIELD_SZ / 16][16];
+    uint8_t num_uuids128;
+    unsigned uuids128_is_complete:1;
+
+    /*** 0x08,0x09 - Local name. */
+    uint8_t name[BLE_HS_ADV_MAX_FIELD_SZ];
+    uint8_t name_len;
+    unsigned name_is_complete:1;
+
+    /*** 0x0a - Tx power level. */
+    int8_t tx_pwr_lvl;
+    unsigned tx_pwr_lvl_is_present:1;
+
+    /*** 0x0d - Slave connection interval range. */
+    uint16_t slave_itvl_min;
+    uint16_t slave_itvl_max;
+    unsigned slave_itvl_range_is_present;
+
+    /*** 0x16 - Service data - 16-bit UUID. */
+    uint8_t svc_data_uuid16[BLE_HS_ADV_MAX_FIELD_SZ];
+    uint8_t svc_data_uuid16_len;
+
+    /*** 0x17 - Public target address. */
+    uint8_t public_tgt_addrs[BLE_HS_ADV_MAX_FIELD_SZ / 6][6];
+    uint8_t num_public_tgt_addrs;
+
+    /*** 0x19 - Appearance. */
+    uint16_t appearance;
+    unsigned appearance_is_present:1;
+
+    /*** 0x1a - Advertising interval. */
+    uint16_t adv_itvl;
+    unsigned adv_itvl_is_present:1;
+
+    /*** 0x20 - Service data - 32-bit UUID. */
+    uint8_t svc_data_uuid32[BLE_HS_ADV_MAX_FIELD_SZ];
+    uint8_t svc_data_uuid32_len;
+
+    /*** 0x21 - Service data - 128-bit UUID. */
+    uint8_t svc_data_uuid128[BLE_HS_ADV_MAX_FIELD_SZ];
+    uint8_t svc_data_uuid128_len;
+
+    /*** 0x24 - URI. */
+    uint8_t uri[BLE_HS_ADV_MAX_FIELD_SZ];
+    uint8_t uri_len;
+
+    /*** 0xff - Manufacturer specific data. */
+    uint8_t mfg_data[BLE_HS_ADV_MAX_FIELD_SZ];
+    uint8_t mfg_data_len;
+};
+
 struct bhd_req {
     struct bhd_msg_hdr hdr;
     union {
@@ -159,6 +251,10 @@ struct bhd_req {
         struct bhd_set_preferred_mtu_req set_preferred_mtu;
         struct bhd_security_initiate_req security_initiate;
         struct bhd_conn_find_req conn_find;
+        struct bhd_adv_start_req adv_start;
+        struct bhd_adv_set_data_req adv_set_data;
+        struct bhd_adv_rsp_set_data_req adv_rsp_set_data;
+        struct bhd_adv_fields_req adv_fields;
     };
 };
 
@@ -255,6 +351,29 @@ struct bhd_conn_find_rsp {
     uint8_t key_size;
 };
 
+struct bhd_adv_start_rsp {
+    int status;
+};
+
+struct bhd_adv_stop_rsp {
+    int status;
+};
+
+struct bhd_adv_set_data_rsp {
+    int status;
+};
+
+struct bhd_adv_rsp_set_data_rsp {
+    int status;
+};
+
+struct bhd_adv_fields_rsp {
+    int status;
+
+    uint8_t data[BLE_HCI_MAX_ADV_DATA_LEN];
+    int data_len;
+};
+
 struct bhd_rsp {
     struct bhd_msg_hdr hdr;
     union {
@@ -276,6 +395,11 @@ struct bhd_rsp {
         struct bhd_set_preferred_mtu_rsp set_preferred_mtu;
         struct bhd_security_initiate_rsp security_initiate;
         struct bhd_conn_find_rsp conn_find;
+        struct bhd_adv_start_rsp adv_start;
+        struct bhd_adv_stop_rsp adv_stop;
+        struct bhd_adv_set_data_rsp adv_set_data;
+        struct bhd_adv_rsp_set_data_rsp adv_rsp_set_data;
+        struct bhd_adv_fields_rsp adv_fields;
     };
 };
 

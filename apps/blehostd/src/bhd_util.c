@@ -9,6 +9,8 @@
 #include "nimble/hci_common.h"
 #include "host/ble_hs.h"
 
+typedef int bhd_kv_parse_fn(const char *src);
+
 static const struct bhd_kv_str_int bhd_op_map[] = {
     { "request",        BHD_MSG_OP_REQ },
     { "response",       BHD_MSG_OP_RSP },
@@ -37,6 +39,11 @@ static const struct bhd_kv_str_int bhd_type_map[] = {
     { "security_initiate",  BHD_MSG_TYPE_ENC_INITIATE },
     { "conn_find",          BHD_MSG_TYPE_CONN_FIND },
     { "reset",              BHD_MSG_TYPE_RESET },
+    { "adv_start",          BHD_MSG_TYPE_ADV_START },
+    { "adv_stop",           BHD_MSG_TYPE_ADV_STOP },
+    { "adv_set_data",       BHD_MSG_TYPE_ADV_SET_DATA },
+    { "adv_rsp_set_data",   BHD_MSG_TYPE_ADV_RSP_SET_DATA },
+    { "adv_fields",         BHD_MSG_TYPE_ADV_FIELDS },
 
     { "sync_evt",       BHD_MSG_TYPE_SYNC_EVT },
     { "connect_evt",    BHD_MSG_TYPE_CONNECT_EVT },
@@ -75,6 +82,28 @@ static const struct bhd_kv_str_int bhd_adv_event_type_map[] = {
     { "scan_ind",       BLE_HCI_ADV_TYPE_ADV_SCAN_IND },
     { "nonconn_ind",    BLE_HCI_ADV_TYPE_ADV_NONCONN_IND },
     { "direct_ind_ld",  BLE_HCI_ADV_TYPE_ADV_DIRECT_IND_LD },
+    { 0 },
+};
+
+static const struct bhd_kv_str_int bhd_adv_conn_mode_map[] = {
+    { "non",            BLE_GAP_CONN_MODE_NON },
+    { "dir",            BLE_GAP_CONN_MODE_DIR },
+    { "und",            BLE_GAP_CONN_MODE_UND },
+    { 0 },
+};
+
+static const struct bhd_kv_str_int bhd_adv_disc_mode_map[] = {
+    { "non",            BLE_GAP_DISC_MODE_NON },
+    { "ltd",            BLE_GAP_DISC_MODE_LTD },
+    { "gen",            BLE_GAP_DISC_MODE_GEN },
+    { 0 },
+};
+
+static const struct bhd_kv_str_int bhd_adv_filter_policy_map[] = {
+    { "none",           BLE_HCI_ADV_FILT_NONE },
+    { "scan",           BLE_HCI_ADV_FILT_SCAN },
+    { "conn",           BLE_HCI_ADV_FILT_CONN },
+    { "both",           BLE_HCI_ADV_FILT_BOTH },
     { 0 },
 };
 
@@ -199,6 +228,122 @@ bhd_adv_event_type_rev_parse(int adv_event_type)
     return bhd_kv_str_int_rev_find(bhd_adv_event_type_map, adv_event_type);
 }
 
+int
+bhd_adv_conn_mode_parse(const char *conn_mode_str)
+{
+    return bhd_kv_str_int_find(bhd_adv_conn_mode_map, conn_mode_str);
+}
+
+const char *
+bhd_adv_conn_mode_rev_parse(int conn_mode)
+{
+    return bhd_kv_str_int_rev_find(bhd_adv_conn_mode_map, conn_mode);
+}
+
+int
+bhd_adv_disc_mode_parse(const char *disc_mode_str)
+{
+    return bhd_kv_str_int_find(bhd_adv_disc_mode_map, disc_mode_str);
+}
+
+const char *
+bhd_adv_disc_mode_rev_parse(int disc_mode)
+{
+    return bhd_kv_str_int_rev_find(bhd_adv_disc_mode_map, disc_mode);
+}
+
+int
+bhd_adv_filter_policy_parse(const char *filter_policy_str)
+{
+    return bhd_kv_str_int_find(bhd_adv_filter_policy_map, filter_policy_str);
+}
+
+const char *
+bhd_adv_filter_policy_rev_parse(int filter_policy)
+{
+    return bhd_kv_str_int_rev_find(bhd_adv_filter_policy_map, filter_policy);
+}
+
+long long int
+bhd_process_json_int(const cJSON *item, int *rc)
+{
+    if (item->type != cJSON_Number) {
+        *rc = SYS_ERANGE;
+        return -1;
+    }
+
+    *rc = 0;
+    return item->valueint;
+}
+
+long long int
+bhd_process_json_int_bounds(const cJSON *item,
+                            long long int minval,
+                            long long int maxval,
+                            int *rc)
+{
+    long long int val;
+
+    val = bhd_process_json_int(item, rc);
+    if (*rc != 0) {
+        return 0;
+    }
+
+    if (val < minval || val > maxval) {
+        *rc = SYS_ERANGE;
+        return 0;
+    }
+
+    return val;
+}
+
+char *
+bhd_process_json_string(const cJSON *item, int *rc)
+{
+    if (item->type != cJSON_String) {
+        *rc = SYS_ERANGE;
+        return NULL;
+    }
+
+    *rc = 0;
+    return item->valuestring;
+}
+
+uint8_t *
+bhd_process_json_hex_string(const cJSON *item, int max_len,
+                            uint8_t *dst, int *out_dst_len, int *rc)
+{
+    char *valstr;
+
+    valstr = bhd_process_json_string(item, rc);
+    switch (*rc) {
+    case 0:
+        *rc = parse_arg_byte_stream(valstr, max_len, dst, out_dst_len);
+        return dst;
+
+    case SYS_ENOENT:
+        *rc = SYS_ERANGE;
+        return NULL;
+
+    default:
+        return NULL;
+    }
+}
+
+uint8_t *
+bhd_process_json_addr(const cJSON *item, uint8_t *dst, int *rc)
+{
+    char *valstr;
+
+    valstr = bhd_process_json_string(item, rc);
+    if (*rc != 0) {
+        return NULL;
+    }
+
+    *rc = parse_arg_mac(valstr, dst);
+    return dst;
+}
+
 long long int
 bhd_json_int(const cJSON *parent, const char *name, int *rc)
 {
@@ -209,13 +354,8 @@ bhd_json_int(const cJSON *parent, const char *name, int *rc)
         *rc = SYS_ENOENT;
         return -1;
     }
-    if (item->type != cJSON_Number) {
-        *rc = SYS_ERANGE;
-        return -1;
-    }
 
-    *rc = 0;
-    return item->valueint;
+    return bhd_process_json_int(item, rc);
 }
 
 int
@@ -248,19 +388,15 @@ long long int
 bhd_json_int_bounds(const cJSON *parent, const char *name,
                     long long int minval, long long int maxval, int *rc)
 {
-    long long int val;
+    cJSON *item;
 
-    val = bhd_json_int(parent, name, rc);
-    if (*rc != 0) {
-        return val;
+    item = cJSON_GetObjectItem(parent, name);
+    if (item == NULL) {
+        *rc = SYS_ENOENT;
+        return -1;
     }
 
-    if (val < minval || val > maxval) {
-        *rc = SYS_ERANGE;
-        return val;
-    }
-
-    return val;
+    return bhd_process_json_int_bounds(item, minval, maxval, rc);
 }
 
 char *
@@ -273,100 +409,350 @@ bhd_json_string(const cJSON *parent, const char *name, int *rc)
         *rc = SYS_ENOENT;
         return NULL;
     }
-    if (item->type != cJSON_String) {
-        *rc = SYS_ERANGE;
-        return NULL;
-    }
 
-    *rc = 0;
-    return item->valuestring;
+    return bhd_process_json_string(item, rc);
 }
 
 uint8_t *
 bhd_json_hex_string(const cJSON *parent, const char *name, int max_len,
                     uint8_t *dst, int *out_dst_len, int *rc)
 {
+    cJSON *item;
+
+    item = cJSON_GetObjectItem(parent, name);
+    if (item == NULL) {
+        *rc = SYS_ENOENT;
+        return NULL;
+    }
+
+    return bhd_process_json_hex_string(item, max_len, dst, out_dst_len, rc);
+}
+
+cJSON *
+bhd_json_arr(const cJSON *parent, const char *name, int *rc)
+{
+    cJSON *item;
+
+    item = cJSON_GetObjectItem(parent, name);
+    if (item == NULL) {
+        *rc = SYS_ENOENT;
+        return NULL;
+    }
+    if (item->type != cJSON_Array) {
+        *rc = SYS_ERANGE;
+        return NULL;
+    }
+
+    *rc = 0;
+    return item;
+}
+
+int
+bhd_json_arr_gen(const cJSON *parent, const char *name,
+                 bhd_json_fn *cb, void *arg)
+{
+    cJSON *item;
+    cJSON *arr;
+    int proceed;
+    int idx;
+    int rc;
+
+    arr = bhd_json_arr(parent, name, &rc);
+    if (rc != 0) {
+        return rc;
+    }
+
+    idx = 0;
+    cJSON_ArrayForEach(item, arr) {
+        proceed = cb(item, &rc, arg);
+        if (!proceed) {
+            return rc;
+        }
+
+        idx++;
+    }
+
+    return 0;
+}
+
+struct ble_json_arr_arg_llong {
+    long long int *dst;
+    long long int minval;
+    long long int maxval;
+    int max_elems;
+    int num_elems;
+};
+
+static int
+ble_json_arr_fn_llong(const cJSON *item, int *rc, void *arg)
+{
+    struct ble_json_arr_arg_llong *barg;
+    long long int val;
+
+    barg = arg;
+
+    if (barg->num_elems >= barg->max_elems) {
+        *rc = SYS_ERANGE;
+        return 1;
+    }
+
+    val = bhd_process_json_int_bounds(item, barg->minval, barg->maxval, rc);
+    if (*rc != 0) {
+        return 1;
+    }
+
+    barg->dst[barg->num_elems] = val;
+    barg->num_elems++;
+    return 0;
+}
+
+int
+ble_json_arr_llong(const cJSON *parent, const char *name, int max_elems,
+                   long long int minval, long long int maxval,
+                   long long int *out_arr, int *out_num_elems)
+{
+    struct ble_json_arr_arg_llong arg;
+    int rc;
+
+    memset(&arg, 0, sizeof arg);
+    arg.dst = out_arr;
+    arg.minval = minval;
+    arg.maxval = maxval;
+    arg.max_elems = max_elems;
+
+    rc = bhd_json_arr_gen(parent, name, ble_json_arr_fn_llong, &arg);
+    if (rc != 0) {
+        return rc;
+    }
+
+    *out_num_elems = arg.num_elems;
+    return 0;
+}
+
+int
+ble_json_arr_uint16(const cJSON *parent, const char *name, int max_elems,
+                    uint16_t minval, uint16_t maxval,
+                    uint16_t *out_arr, int *out_num_elems)
+{
+    long long int *vals;
+    int rc;
+    int i;
+
+    vals = malloc_success(max_elems * sizeof *vals);
+
+    rc = ble_json_arr_llong(parent, name, max_elems, minval, maxval,
+                            vals, out_num_elems);
+    if (rc == 0) {
+        for (i = 0; i < *out_num_elems; i++) {
+            out_arr[i] = vals[i];
+        }
+    }
+
+    free(vals);
+
+    return rc;
+}
+
+int
+ble_json_arr_uint32(const cJSON *parent, const char *name, int max_elems,
+                    uint32_t minval, uint32_t maxval,
+                    uint32_t *out_arr, int *out_num_elems)
+{
+    long long int *vals;
+    int rc;
+    int i;
+
+    vals = malloc_success(max_elems * sizeof *vals);
+
+    rc = ble_json_arr_llong(parent, name, max_elems, minval, maxval,
+                            vals, out_num_elems);
+    if (rc == 0) {
+        for (i = 0; i < *out_num_elems; i++) {
+            out_arr[i] = vals[i];
+        }
+    }
+
+    free(vals);
+
+    return rc;
+}
+
+struct ble_json_arr_arg_hex_string {
+    uint8_t *dst;
+    int elem_sz;
+    int max_elems;
+    int num_elems;
+};
+
+static int
+ble_json_arr_fn_hex_string(const cJSON *item, int *rc, void *arg)
+{
+    struct ble_json_arr_arg_hex_string *barg;
+    uint8_t *elem;
+    int num_bytes;
+
+    barg = arg;
+
+    if (barg->num_elems >= barg->max_elems) {
+        *rc = SYS_ERANGE;
+        return 1;
+    }
+
+    elem = barg->dst + barg->num_elems * barg->elem_sz;
+    bhd_process_json_hex_string(item, barg->elem_sz, elem, &num_bytes, rc);
+    if (*rc != 0) {
+        return 1;
+    }
+    if (num_bytes != barg->elem_sz) {
+        *rc = SYS_ERANGE;
+        return 1;
+    }
+
+    barg->num_elems++;
+
+    return 0;
+}
+
+int
+ble_json_arr_hex_string(const cJSON *parent, const char *name, int elem_sz,
+                        int max_elems, uint8_t *out_arr, int *out_num_elems)
+{
+    struct ble_json_arr_arg_hex_string arg;
+    int rc;
+
+    memset(&arg, 0, sizeof arg);
+    arg.dst = out_arr;
+    arg.elem_sz = elem_sz;
+    arg.max_elems = max_elems;
+
+    rc = bhd_json_arr_gen(parent, name, ble_json_arr_fn_hex_string, &arg);
+    if (rc != 0) {
+        return rc;
+    }
+
+    *out_num_elems = arg.num_elems;
+    return 0;
+}
+
+struct ble_json_arr_arg_addr {
+    uint8_t *dst;
+    int max_elems;
+    int num_elems;
+};
+
+static int
+ble_json_arr_fn_addr(const cJSON *item, int *rc, void *arg)
+{
+    struct ble_json_arr_arg_addr *barg;
+    uint8_t *elem;
+
+    barg = arg;
+
+    if (barg->num_elems >= barg->max_elems) {
+        *rc = SYS_ERANGE;
+        return 1;
+    }
+
+    elem = barg->dst + barg->num_elems * 6;
+    bhd_process_json_addr(item, elem, rc);
+    if (*rc != 0) {
+        return 1;
+    }
+
+    barg->num_elems++;
+
+    return 0;
+}
+
+int
+ble_json_arr_addr(const cJSON *parent, const char *name,
+                  int max_elems, uint8_t *out_arr, int *out_num_elems)
+{
+    struct ble_json_arr_arg_addr arg;
+    int rc;
+
+    memset(&arg, 0, sizeof arg);
+    arg.dst = out_arr;
+    arg.max_elems = max_elems;
+
+    rc = bhd_json_arr_gen(parent, name, ble_json_arr_fn_addr, &arg);
+    if (rc != 0) {
+        return rc;
+    }
+
+    *out_num_elems = arg.num_elems;
+    return 0;
+}
+
+static int
+bhd_json_kv(bhd_kv_parse_fn *parse_cb, 
+            const cJSON *parent, const char *name, int *rc)
+{
     char *valstr;
+    int valnum;
 
     valstr = bhd_json_string(parent, name, rc);
     switch (*rc) {
     case 0:
-        *rc = parse_arg_byte_stream(valstr, max_len, dst, out_dst_len);
-        return dst;
+        valnum = parse_cb(valstr);
+        if (valnum == -1) {
+            *rc = SYS_ERANGE;
+        } else {
+            *rc = 0;
+        }
+        return valnum;
 
     case SYS_ENOENT:
         *rc = SYS_ERANGE;
-        return NULL;
+        return -1;
 
     default:
-        return NULL;
+        return -1;
     }
 }
 
 int
 bhd_json_addr_type(const cJSON *parent, const char *name, int *rc)
 {
-    uint8_t addr_type;
-    char *valstr;
-
-    valstr = bhd_json_string(parent, name, rc);
-    switch (*rc) {
-    case 0:
-        addr_type = bhd_addr_type_parse(valstr);
-        if (addr_type == -1) {
-            *rc = SYS_ERANGE;
-        } else {
-            *rc = 0;
-        }
-        return addr_type;
-
-    case SYS_ENOENT:
-        *rc = SYS_ERANGE;
-        return -1;
-
-    default:
-        return -1;
-    }
+    return bhd_json_kv(bhd_addr_type_parse, parent, name, rc);
 }
 
 int
 bhd_json_scan_filter_policy(const cJSON *parent, const char *name, int *rc)
 {
-    uint8_t filter_policy;
-    char *valstr;
+    return bhd_json_kv(bhd_scan_filter_policy_parse, parent, name, rc);
+}
 
-    valstr = bhd_json_string(parent, name, rc);
-    switch (*rc) {
-    case 0:
-        filter_policy = bhd_scan_filter_policy_parse(valstr);
-        if (filter_policy == -1) {
-            *rc = SYS_ERANGE;
-        } else {
-            *rc = 0;
-        }
-        return filter_policy;
+int
+bhd_json_adv_conn_mode(const cJSON *parent, const char *name, int *rc)
+{
+    return bhd_json_kv(bhd_adv_conn_mode_parse, parent, name, rc);
+}
 
-    case SYS_ENOENT:
-        *rc = SYS_ERANGE;
-        return -1;
+int
+bhd_json_adv_disc_mode(const cJSON *parent, const char *name, int *rc)
+{
+    return bhd_json_kv(bhd_adv_disc_mode_parse, parent, name, rc);
+}
 
-    default:
-        return -1;
-    }
+int
+bhd_json_adv_filter_policy(const cJSON *parent, const char *name, int *rc)
+{
+    return bhd_json_kv(bhd_adv_filter_policy_parse, parent, name, rc);
 }
 
 uint8_t *
 bhd_json_addr(const cJSON *parent, const char *name, uint8_t *dst, int *rc)
 {
-    char *valstr;
+    const cJSON *item;
 
-    valstr = bhd_json_string(parent, name, rc);
-    if (*rc != 0) {
+    item = cJSON_GetObjectItem(parent, name);
+    if (item == NULL) {
+        *rc = SYS_ENOENT;
         return NULL;
     }
 
-    *rc = parse_arg_mac(valstr, dst);
-    return dst;
+    return bhd_process_json_addr(item, dst, rc);
 }
 
 ble_uuid_t *
@@ -578,6 +964,16 @@ bhd_json_add_adv_event_type(cJSON *parent, const char *name,
     cJSON_AddStringToObject(parent, name, valstr);
     return 0;
 }
+
+#if 0
+cJSON *
+bhd_json_create_arr(const void *data, int num_elems, int elem_szkO
+{
+    char valstr[18];
+
+    return cJSON_CreateString(bhd_addr_str(valstr, addr));
+}
+#endif
 
 char *
 bhd_hex_str(char *dst, int max_dst_len, int *out_dst_len, const uint8_t *src,

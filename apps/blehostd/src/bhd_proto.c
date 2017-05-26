@@ -35,6 +35,11 @@ static bhd_req_run_fn bhd_set_preferred_mtu_req_run;
 static bhd_req_run_fn bhd_security_initiate_req_run;
 static bhd_req_run_fn bhd_conn_find_req_run;
 static bhd_req_run_fn bhd_reset_req_run;
+static bhd_req_run_fn bhd_adv_start_req_run;
+static bhd_req_run_fn bhd_adv_stop_req_run;
+static bhd_req_run_fn bhd_adv_set_data_req_run;
+static bhd_req_run_fn bhd_adv_rsp_set_data_req_run;
+static bhd_req_run_fn bhd_adv_fields_req_run;
 
 static const struct bhd_req_dispatch_entry {
     int req_type;
@@ -59,6 +64,11 @@ static const struct bhd_req_dispatch_entry {
     { BHD_MSG_TYPE_ENC_INITIATE,        bhd_security_initiate_req_run },
     { BHD_MSG_TYPE_CONN_FIND,           bhd_conn_find_req_run },
     { BHD_MSG_TYPE_RESET,               bhd_reset_req_run },
+    { BHD_MSG_TYPE_ADV_START,           bhd_adv_start_req_run },
+    { BHD_MSG_TYPE_ADV_STOP,            bhd_adv_stop_req_run },
+    { BHD_MSG_TYPE_ADV_SET_DATA,        bhd_adv_set_data_req_run },
+    { BHD_MSG_TYPE_ADV_RSP_SET_DATA,    bhd_adv_rsp_set_data_req_run },
+    { BHD_MSG_TYPE_ADV_FIELDS,          bhd_adv_fields_req_run },
 
     { -1 },
 };
@@ -83,6 +93,11 @@ static bhd_subrsp_enc_fn bhd_set_preferred_mtu_rsp_enc;
 static bhd_subrsp_enc_fn bhd_security_initiate_rsp_enc;
 static bhd_subrsp_enc_fn bhd_conn_find_rsp_enc;
 static bhd_subrsp_enc_fn bhd_reset_rsp_enc;
+static bhd_subrsp_enc_fn bhd_adv_start_rsp_enc;
+static bhd_subrsp_enc_fn bhd_adv_stop_rsp_enc;
+static bhd_subrsp_enc_fn bhd_adv_set_data_rsp_enc;
+static bhd_subrsp_enc_fn bhd_adv_rsp_set_data_rsp_enc;
+static bhd_subrsp_enc_fn bhd_adv_fields_rsp_enc;
 
 static const struct bhd_rsp_dispatch_entry {
     int rsp_type;
@@ -108,6 +123,11 @@ static const struct bhd_rsp_dispatch_entry {
     { BHD_MSG_TYPE_ENC_INITIATE,        bhd_security_initiate_rsp_enc },
     { BHD_MSG_TYPE_CONN_FIND,           bhd_conn_find_rsp_enc },
     { BHD_MSG_TYPE_RESET,               bhd_reset_rsp_enc },
+    { BHD_MSG_TYPE_ADV_START,           bhd_adv_start_rsp_enc },
+    { BHD_MSG_TYPE_ADV_STOP,            bhd_adv_stop_rsp_enc },
+    { BHD_MSG_TYPE_ADV_SET_DATA,        bhd_adv_set_data_rsp_enc },
+    { BHD_MSG_TYPE_ADV_RSP_SET_DATA,    bhd_adv_rsp_set_data_rsp_enc },
+    { BHD_MSG_TYPE_ADV_FIELDS,          bhd_adv_fields_rsp_enc },
 
     { -1 },
 };
@@ -645,6 +665,10 @@ bhd_set_rand_addr_req_run(cJSON *parent, struct bhd_req *req,
     return 1;
 }
 
+/**
+ * @return                      1 if a response should be sent;
+ *                              0 for no response.
+ */
 static int
 bhd_conn_cancel_req_run(cJSON *parent, struct bhd_req *req,
                            struct bhd_rsp *rsp)
@@ -653,6 +677,10 @@ bhd_conn_cancel_req_run(cJSON *parent, struct bhd_req *req,
     return 1;
 }
 
+/**
+ * @return                      1 if a response should be sent;
+ *                              0 for no response.
+ */
 static int
 bhd_scan_req_run(cJSON *parent, struct bhd_req *req, struct bhd_rsp *rsp)
 {
@@ -718,6 +746,10 @@ bhd_scan_req_run(cJSON *parent, struct bhd_req *req, struct bhd_rsp *rsp)
     return 1;
 }
 
+/**
+ * @return                      1 if a response should be sent;
+ *                              0 for no response.
+ */
 static int
 bhd_scan_cancel_req_run(cJSON *parent,
                         struct bhd_req *req, struct bhd_rsp *rsp)
@@ -726,6 +758,10 @@ bhd_scan_cancel_req_run(cJSON *parent,
     return 1;
 }
 
+/**
+ * @return                      1 if a response should be sent;
+ *                              0 for no response.
+ */
 static int
 bhd_set_preferred_mtu_req_run(cJSON *parent,
                               struct bhd_req *req, struct bhd_rsp *rsp)
@@ -742,6 +778,10 @@ bhd_set_preferred_mtu_req_run(cJSON *parent,
     return 1;
 }
 
+/**
+ * @return                      1 if a response should be sent;
+ *                              0 for no response.
+ */
 static int
 bhd_security_initiate_req_run(cJSON *parent,
                          struct bhd_req *req, struct bhd_rsp *rsp)
@@ -758,6 +798,10 @@ bhd_security_initiate_req_run(cJSON *parent,
     return 1;
 }
 
+/**
+ * @return                      1 if a response should be sent;
+ *                              0 for no response.
+ */
 static int
 bhd_conn_find_req_run(cJSON *parent,
                       struct bhd_req *req, struct bhd_rsp *rsp)
@@ -774,11 +818,396 @@ bhd_conn_find_req_run(cJSON *parent,
     return 1;
 }
 
+/**
+ * @return                      1 if a response should be sent;
+ *                              0 for no response.
+ */
 static int
 bhd_reset_req_run(cJSON *parent,
                   struct bhd_req *req, struct bhd_rsp *rsp)
 {
     ble_hs_sched_reset(0);
+    return 1;
+}
+
+/**
+ * @return                      1 if a response should be sent;
+ *                              0 for no response.
+ */
+static int
+bhd_adv_start_req_run(cJSON *parent,
+                      struct bhd_req *req, struct bhd_rsp *rsp)
+{
+    int rc;
+
+    req->adv_start.own_addr_type =
+        bhd_json_addr_type(parent, "own_addr_type", &rc);
+    if (rc != 0) {
+        bhd_err_build(rsp, rc, "invalid own_addr_type");
+        return 1;
+    }
+
+    req->adv_start.peer_addr.type =
+        bhd_json_addr_type(parent, "peer_addr_type", &rc);
+    switch (rc) {
+    case SYS_ENOENT:
+        break;
+
+    default:
+        bhd_err_build(rsp, rc, "invalid peer_addr_type");
+        return 1;
+
+    case 0:
+        bhd_json_addr(parent, "peer_addr", req->adv_start.peer_addr.val, &rc);
+        if (rc != 0) {
+            bhd_err_build(rsp, rc, "invalid peer_addr");
+            return 1;
+        }
+    }
+
+    req->adv_start.duration_ms =
+        bhd_json_int_bounds(parent, "duration_ms", 0, INT32_MAX, &rc);
+    if (rc != 0) {
+        bhd_err_build(rsp, rc, "invalid duration_ms");
+        return 1;
+    }
+
+    req->adv_start.conn_mode =
+        bhd_json_adv_conn_mode(parent, "conn_mode", &rc);
+    if (rc != 0) {
+        bhd_err_build(rsp, rc, "invalid conn_mode");
+        return 1;
+    }
+
+    req->adv_start.disc_mode =
+        bhd_json_adv_disc_mode(parent, "disc_mode", &rc);
+    if (rc != 0) {
+        bhd_err_build(rsp, rc, "invalid disc_mode");
+        return 1;
+    }
+
+    req->adv_start.itvl_min =
+        bhd_json_int_bounds(parent, "itvl_min", 0, INT16_MAX, &rc);
+    if (rc != 0) {
+        bhd_err_build(rsp, rc, "invalid itvl_min");
+        return 1;
+    }
+
+    req->adv_start.itvl_max =
+        bhd_json_int_bounds(parent, "itvl_max", 0, INT16_MAX, &rc);
+    if (rc != 0) {
+        bhd_err_build(rsp, rc, "invalid itvl_max");
+        return 1;
+    }
+
+    req->adv_start.channel_map =
+        bhd_json_int_bounds(parent, "channel_map", 0, INT8_MAX, &rc);
+    if (rc != 0) {
+        bhd_err_build(rsp, rc, "invalid channel_map");
+        return 1;
+    }
+
+    req->adv_start.filter_policy =
+        bhd_json_adv_filter_policy(parent, "filter_policy", &rc);
+    if (rc != 0) {
+        bhd_err_build(rsp, rc, "invalid filter_policy");
+        return 1;
+    }
+
+    req->adv_start.high_duty_cycle =
+        bhd_json_adv_filter_policy(parent, "high_duty_cycle", &rc);
+    if (rc != 0) {
+        bhd_err_build(rsp, rc, "invalid high_duty_cycle");
+        return 1;
+    }
+
+    bhd_gap_adv_start(req, rsp);
+    return 1;
+}
+
+/**
+ * @return                      1 if a response should be sent;
+ *                              0 for no response.
+ */
+static int
+bhd_adv_stop_req_run(cJSON *parent,
+                     struct bhd_req *req, struct bhd_rsp *rsp)
+{
+    bhd_gap_adv_stop(req, rsp);
+    return 1;
+}
+
+/**
+ * @return                      1 if a response should be sent;
+ *                              0 for no response.
+ */
+static int
+bhd_adv_set_data_req_run(cJSON *parent,
+                         struct bhd_req *req, struct bhd_rsp *rsp)
+{
+    int rc;
+
+    bhd_json_hex_string(parent, "data",
+                        sizeof req->adv_set_data.data, req->adv_set_data.data,
+                        &req->adv_set_data.data_len, &rc);
+    if (rc != 0) {
+        return bhd_err_fill(&rsp->err, rc, "invalid data");
+    }
+
+    bhd_gap_adv_set_data(req, rsp);
+    return 1;
+}
+
+/**
+ * @return                      1 if a response should be sent;
+ *                              0 for no response.
+ */
+static int
+bhd_adv_rsp_set_data_req_run(cJSON *parent,
+                             struct bhd_req *req, struct bhd_rsp *rsp)
+{
+    int rc;
+
+    bhd_json_hex_string(parent,
+                        "data",
+                        sizeof req->adv_rsp_set_data.data,
+                        req->adv_rsp_set_data.data,
+                        &req->adv_rsp_set_data.data_len,
+                        &rc);
+    if (rc != 0) {
+        return bhd_err_fill(&rsp->err, rc, "invalid data");
+    }
+
+    bhd_gap_adv_rsp_set_data(req, rsp);
+    return 1;
+}
+
+/**
+ * @return                      1 if a response should be sent;
+ *                              0 for no response.
+ */
+static int
+bhd_adv_fields_req_run(cJSON *parent,
+                       struct bhd_req *req, struct bhd_rsp *rsp)
+{
+    const char *s;
+    int slen;
+    int num_elems;
+    int num_bytes;
+    int rc;
+
+    req->adv_fields.flags =
+        bhd_json_int_bounds(parent, "flags", 0, UINT8_MAX, &rc);
+    if (rc != 0 || req->adv_fields.flags == 0) {
+        bhd_err_build(rsp, rc, "invalid flags");
+        return 1;
+    }
+
+    rc = ble_json_arr_uint16(parent,
+                             "uuids16", 
+                             sizeof req->adv_fields.uuids16 /
+                               sizeof req->adv_fields.uuids16[0],
+                             0,
+                             0xffff,
+                             req->adv_fields.uuids16,
+                             &num_elems);
+    if (rc != 0 && rc != SYS_ENOENT) {
+        bhd_err_build(rsp, rc, "invalid uuids16");
+        return 1;
+    }
+    req->adv_fields.num_uuids16 = num_elems;
+
+    req->adv_fields.uuids16_is_complete =
+        bhd_json_bool(parent, "uuids16_is_complete", &rc);
+    if (rc != 0 && rc != SYS_ENOENT) {
+        bhd_err_build(rsp, rc, "invalid uuids16_is_complete value");
+        return 1;
+    }
+
+    rc = ble_json_arr_uint32(parent,
+                             "uuids32", 
+                             sizeof req->adv_fields.uuids32 /
+                               sizeof req->adv_fields.uuids32[0],
+                             0,
+                             0xffff,
+                             req->adv_fields.uuids32,
+                             &num_elems);
+    if (rc != 0 && rc != SYS_ENOENT) {
+        bhd_err_build(rsp, rc, "invalid uuids32");
+        return 1;
+    }
+    req->adv_fields.num_uuids32 = num_elems;
+
+    req->adv_fields.uuids32_is_complete =
+        bhd_json_bool(parent, "uuids32_is_complete", &rc);
+    if (rc != 0 && rc != SYS_ENOENT) {
+        bhd_err_build(rsp, rc, "invalid uuids32_is_complete value");
+        return 1;
+    }
+
+    rc = ble_json_arr_hex_string(parent,
+                                 "uuids128",
+                                 16,
+                                 sizeof req->adv_fields.uuids128 /
+                                   sizeof req->adv_fields.uuids128[0],
+                             (uint8_t *)req->adv_fields.uuids128,
+                             &num_elems);
+    if (rc != 0 && rc != SYS_ENOENT) {
+        bhd_err_build(rsp, rc, "invalid uuids128");
+        return 1;
+    }
+    req->adv_fields.num_uuids128 = num_elems;
+
+    req->adv_fields.uuids128_is_complete =
+        bhd_json_bool(parent, "uuids128_is_complete", &rc);
+    if (rc != 0 && rc != SYS_ENOENT) {
+        bhd_err_build(rsp, rc, "invalid uuids128_is_complete value");
+        return 1;
+    }
+
+    s = bhd_json_string(parent, "name", &rc);
+    if (rc != 0 && rc != SYS_ENOENT) {
+        bhd_err_build(rsp, rc, "invalid name");
+        return 1;
+    }
+    slen = strlen(s);
+    if (slen > sizeof req->adv_fields.name) {
+        bhd_err_build(rsp, SYS_ERANGE, "invalid name");
+        return 1;
+    }
+    memcpy(req->adv_fields.name, s, slen);
+    req->adv_fields.name_len = slen;
+
+    req->adv_fields.name_is_complete =
+        bhd_json_bool(parent, "name_is_complete", &rc);
+    if (rc != 0 && rc != SYS_ENOENT) {
+        return bhd_err_build(rsp, rc,
+                            "invalid name_is_complete value");
+    }
+
+    req->adv_fields.tx_pwr_lvl =
+        bhd_json_int_bounds(parent, "tx_pwr_lvl", INT8_MIN, INT8_MAX, &rc);
+    if (rc == 0) {
+        req->adv_fields.tx_pwr_lvl_is_present = 1;
+    } else if (rc != SYS_ENOENT) {
+        bhd_err_build(rsp, rc, "invalid tx_pwr_lvl");
+        return 1;
+    }
+
+    req->adv_fields.slave_itvl_min =
+        bhd_json_int_bounds(parent, "slave_itvl_min", 0, UINT16_MAX, &rc);
+    switch (rc) {
+    case SYS_ENOENT:
+        break;
+
+    default:
+        bhd_err_build(rsp, rc, "invalid slave_itvl_min");
+        return 1;
+
+    case 0:
+        req->adv_fields.slave_itvl_max =
+            bhd_json_int_bounds(parent, "slave_itvl_max", 0, UINT16_MAX, &rc);
+        if (rc != 0) {
+            bhd_err_build(rsp, rc, "invalid slave_itvl_max");
+            return 1;
+        }
+
+        req->adv_fields.slave_itvl_range_is_present = 1;
+        break;
+    }
+
+    bhd_json_hex_string(parent,
+                        "svc_data_uuid16",
+                        sizeof req->adv_fields.svc_data_uuid16,
+                        req->adv_fields.svc_data_uuid16,
+                        &num_bytes,
+                        &rc);
+    if (rc != 0) {
+        bhd_err_build(rsp, rc, "invalid svc_data_uuid16");
+        return 1;
+    }
+    req->adv_fields.svc_data_uuid16_len = num_bytes;
+
+    rc = ble_json_arr_addr(parent,
+                           "public_tgt_addrs", 
+                           sizeof req->adv_fields.public_tgt_addrs /
+                             sizeof req->adv_fields.public_tgt_addrs[0],
+                           (uint8_t *)req->adv_fields.public_tgt_addrs,
+                           &num_elems);
+    if (rc != 0) {
+        bhd_err_build(rsp, rc, "invalid public_target_addrs");
+        return 1;
+    }
+    req->adv_fields.num_public_tgt_addrs = num_elems;
+
+    req->adv_fields.appearance =
+        bhd_json_int_bounds(parent, "appearance", 0, UINT16_MAX, &rc);
+    if (rc == 0) {
+        req->adv_fields.appearance_is_present = 1;
+    } else if (rc != SYS_ENOENT) {
+        bhd_err_build(rsp, rc, "invalid appearance");
+        return 1;
+    }
+
+    req->adv_fields.adv_itvl =
+        bhd_json_int_bounds(parent, "adv_itvl", 0, UINT16_MAX, &rc);
+    if (rc == 0) {
+        req->adv_fields.adv_itvl_is_present = 1;
+    } else if (rc != SYS_ENOENT) {
+        bhd_err_build(rsp, rc, "invalid adv_itvl");
+        return 1;
+    }
+
+    bhd_json_hex_string(parent,
+                        "svc_data_uuid32",
+                        sizeof req->adv_fields.svc_data_uuid32,
+                        req->adv_fields.svc_data_uuid32,
+                        &num_bytes,
+                        &rc);
+    if (rc != 0) {
+        bhd_err_build(rsp, rc, "invalid svc_data_uuid32");
+        return 1;
+    }
+    req->adv_fields.svc_data_uuid32_len = num_bytes;
+
+    bhd_json_hex_string(parent,
+                        "svc_data_uuid128",
+                        sizeof req->adv_fields.svc_data_uuid128,
+                        req->adv_fields.svc_data_uuid128,
+                        &num_bytes,
+                        &rc);
+    if (rc != 0) {
+        bhd_err_build(rsp, rc, "invalid svc_data_uuid128");
+        return 1;
+    }
+    req->adv_fields.svc_data_uuid128_len = num_bytes;
+
+    s = bhd_json_string(parent, "uri", &rc);
+    if (rc != 0 && rc != SYS_ENOENT) {
+        bhd_err_build(rsp, rc, "invalid uri");
+        return 1;
+    }
+    slen = strlen(s);
+    if (slen > sizeof req->adv_fields.uri) {
+        rc = SYS_ERANGE;
+        bhd_err_build(rsp, rc, "invalid uri");
+        return 1;
+    }
+    memcpy(req->adv_fields.uri, s, slen);
+    req->adv_fields.uri_len = slen;
+
+    bhd_json_hex_string(parent,
+                        "mfg_data",
+                        sizeof req->adv_fields.mfg_data,
+                        req->adv_fields.mfg_data,
+                        &num_bytes,
+                        &rc);
+    if (rc != 0) {
+        bhd_err_build(rsp, rc, "invalid mfg_data");
+        return 1;
+    }
+    req->adv_fields.mfg_data_len = num_bytes;
+
     return 1;
 }
 
@@ -1042,6 +1471,41 @@ bhd_conn_find_rsp_enc(cJSON *parent, const struct bhd_rsp *rsp)
 static int
 bhd_reset_rsp_enc(cJSON *parent, const struct bhd_rsp *rsp)
 {
+    return 0;
+}
+
+static int
+bhd_adv_start_rsp_enc(cJSON *parent, const struct bhd_rsp *rsp)
+{
+    bhd_json_add_int(parent, "status", rsp->adv_start.status);
+    return 0;
+}
+
+static int
+bhd_adv_stop_rsp_enc(cJSON *parent, const struct bhd_rsp *rsp)
+{
+    bhd_json_add_int(parent, "status", rsp->adv_stop.status);
+    return 0;
+}
+
+static int
+bhd_adv_set_data_rsp_enc(cJSON *parent, const struct bhd_rsp *rsp)
+{
+    bhd_json_add_int(parent, "status", rsp->adv_set_data.status);
+    return 0;
+}
+
+static int
+bhd_adv_rsp_set_data_rsp_enc(cJSON *parent, const struct bhd_rsp *rsp)
+{
+    bhd_json_add_int(parent, "status", rsp->adv_rsp_set_data.status);
+    return 0;
+}
+
+static int
+bhd_adv_fields_rsp_enc(cJSON *parent, const struct bhd_rsp *rsp)
+{
+    bhd_json_add_int(parent, "status", rsp->adv_fields.status);
     return 0;
 }
 
