@@ -536,14 +536,13 @@ bhd_json_add_addr(cJSON *parent, const char *name, const uint8_t *addr)
  * MacOS (https://gcc.gnu.org/bugzilla/show_bug.cgi?id=66509).
  */
 void
-bhd_json_add_int(cJSON *parent, const char *name, int64_t val)
+bhd_json_add_int(cJSON *parent, const char *name, intmax_t val)
 {
     cJSON *item;
 
     item = cJSON_CreateNumber(val);
     cJSON_AddItemToObject(parent, name, item);
 }
-
 
 void
 bhd_json_add_bool(cJSON *parent, const char *name, int val)

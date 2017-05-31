@@ -40,7 +40,7 @@ bhd_json_uuid(const cJSON *parent, const char *name, ble_uuid_any_t *dst,
 cJSON *bhd_json_create_byte_string(const uint8_t *data, int len);
 cJSON *bhd_json_create_uuid(const ble_uuid_t *uuid);
 cJSON *bhd_json_create_uuid128_bytes(const uint8_t uuid128_bytes[16]);
-void bhd_json_add_int(cJSON *parent, const char *name, int64_t val);
+void bhd_json_add_int(cJSON *parent, const char *name, intmax_t val);
 void bhd_json_add_bool(cJSON *parent, const char *name, int val);
 void bhd_json_add_bytes(cJSON *parent, const char *name, const uint8_t *data,
                         int len);
