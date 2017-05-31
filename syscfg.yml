@@ -17,6 +17,9 @@ syscfg.vals:
     # We're running in sim; it's OK to over-allocate.
     MSYS_1_BLOCK_COUNT: 1000
     BLE_ACL_BUF_COUNT: 1000
+    BLE_HCI_EVT_HI_BUF_COUNT: 1000
+    BLE_HCI_EVT_LO_BUF_COUNT: 1000
+    BLE_HCI_ACL_OUT_COUNT: 1000
     BLE_MAX_CONNECTIONS: 64
 
     # More stability; less correctness.  This is a long-running process.
