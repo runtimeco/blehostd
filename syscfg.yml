@@ -14,6 +14,10 @@ syscfg.defs:
 syscfg.vals:
     OS_MAIN_TASK_PRIO: 1
 
+    # Disable logging.  Writing lots of log output to the UART seems to cause
+    # the uart poller task to starve the system in some environemnts.
+    LOG_LEVEL: 255
+
     # We're running in sim; it's OK to over-allocate.
     MSYS_1_BLOCK_COUNT: 1000
     BLE_ACL_BUF_COUNT: 1000
