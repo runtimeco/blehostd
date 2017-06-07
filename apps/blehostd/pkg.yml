@@ -25,15 +25,15 @@ pkg.homepage: "http://mynewt.apache.org/"
 pkg.keywords:
 
 pkg.deps:
-    - encoding/json
-    - encoding/cjson
-    - net/nimble/host
-    - sys/console/full
-    - sys/log/full
-    - sys/stats/full
+    - "@apache-mynewt-core/encoding/json"
+    - "@apache-mynewt-core/net/nimble/host"
+    - "@apache-mynewt-core/sys/console/full"
+    - "@apache-mynewt-core/sys/log/full"
+    - "@apache-mynewt-core/sys/stats/full"
+    - "@runtime-blehostd/encoding/cjson"
 
 pkg.deps.BLEHOSTD_USE_SOCKET:
-    - net/nimble/transport/socket
+    - "@apache-mynewt-core/net/nimble/transport/socket"
 
 pkg.deps.BLEHOSTD_USE_UART:
-    - net/nimble/transport/uart
+    - "@apache-mynewt-core/net/nimble/transport/uart"
