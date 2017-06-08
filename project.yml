@@ -17,7 +17,7 @@
 # under the License.
 #
 
-project.name: "runtime-blehostd"
+project.name: "blehostd"
 
 project.repositories:
     - apache-mynewt-core

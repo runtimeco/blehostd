@@ -1,4 +1,4 @@
-repo.name: runtime-blehostd
+repo.name: blehostd
 repo.versions:
     "0.0.0": "master"
 
