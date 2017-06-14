@@ -9,14 +9,6 @@
 #include "nimble/ble.h"
 #include "host/ble_hs.h"
 
-static const struct ble_gap_conn_desc bhd_gap_null_desc = {
-    .conn_handle = BLE_HS_CONN_HANDLE_NONE,
-    .our_id_addr = { BHD_ADDR_TYPE_NONE },
-    .our_ota_addr = { BHD_ADDR_TYPE_NONE },
-    .peer_id_addr = { BHD_ADDR_TYPE_NONE },
-    .peer_ota_addr = { BHD_ADDR_TYPE_NONE },
-};
-
 static int
 bhd_gap_send_connect_evt(int status, uint16_t conn_handle, bhd_seq_t seq)
 {
