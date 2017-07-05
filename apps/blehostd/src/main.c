@@ -412,7 +412,7 @@ main(int argc, char **argv)
                 blehostd_dev_filename, blehostd_socket_filename);
 
 #ifdef ARCH_sim
-        mcu_sim_parse_args(1, argv);
+        mcu_sim_parse_args(argc, argv);
 #endif
     }
 
