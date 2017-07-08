@@ -21,15 +21,9 @@
 #include "host/ble_hs.h"
 #include "defs/error.h"
 
-#define BLEHOSTD_STACK_SIZE     (OS_STACK_ALIGN(512))
-#define BLEHOSTD_TASK_PRIO      3
-
 #define BLEHOSTD_MAX_MSG_SZ     10240
 
 static FILE *blehostd_log_file;
-
-static struct os_task blehostd_task;
-static os_stack_t blehostd_stack[BLEHOSTD_STACK_SIZE];
 
 static struct os_mqueue blehostd_req_mq;
 static struct os_mqueue blehostd_rsp_mq;
@@ -42,6 +36,12 @@ static const char *blehostd_dev_filename;
 
 static struct os_mbuf *blehostd_packet;
 static uint16_t blehostd_packet_len;
+
+/* Mbuf that we failed to send due to insufficient socket capacity. */
+static struct os_mbuf *blehostd_pending_rsp;
+
+/* Protects accesses to blehostd_pending_rsp. */
+static struct os_mutex blehostd_mutex;
 
 void
 blehostd_logf(const char *fmt, ...)
@@ -145,7 +145,7 @@ err:
     return rc;
 }
 
-static void
+static int
 blehostd_process_rsp(struct os_mbuf *om)
 {
     int rc;
@@ -155,19 +155,45 @@ blehostd_process_rsp(struct os_mbuf *om)
     blehostd_log_mbuf(om);
     rc = mn_sendto(blehostd_socket, om,
                    (struct mn_sockaddr *)&blehostd_server_addr);
-    if (rc != 0) {
-        BHD_LOG(INFO, "mn_sendto() failed; rc=%d\n", rc);
-    }
+    return rc;
 }
 
 static void
 blehostd_process_rsp_mq(struct os_event *ev)
 {
     struct os_mbuf *om;
+    int rc;
 
-    while ((om = os_mqueue_get(&blehostd_rsp_mq)) != NULL) {
-        blehostd_process_rsp(om);
+    rc = os_mutex_pend(&blehostd_mutex, OS_TIMEOUT_NEVER);
+    assert(rc == 0);
+
+    while (1) {
+        if (blehostd_pending_rsp != NULL) {
+            /* We failed to send an mbuf last time; send that one first. */
+            om = blehostd_pending_rsp;
+            blehostd_pending_rsp = NULL;
+        } else {
+            om = os_mqueue_get(&blehostd_rsp_mq);
+            if (om == NULL) {
+                /* Nothing left to send. */
+                break;
+            }
+        }
+
+        rc = blehostd_process_rsp(om);
+        if (rc == MN_EAGAIN) {
+            /* Socket cannot accommodate packet; try again later. */
+            blehostd_pending_rsp = om;
+            break;
+        } else if (rc != 0) {
+            BHD_LOG(INFO, "mn_sendto() failed; rc=%d\n", rc);
+            assert(0);
+            break;
+        }
     }
+
+    rc = os_mutex_release(&blehostd_mutex);
+    assert(rc == 0);
 }
 
 static int
@@ -183,30 +209,6 @@ blehostd_fill_addr(struct mn_sockaddr_un *addr, const char *filename)
     addr->msun_len = sizeof *addr;
     addr->msun_family = MN_AF_LOCAL;
     memcpy(addr->msun_path, filename, name_len + 1);
-
-    return 0;
-}
-
-static int
-blehostd_connect(const char *sock_path)
-{
-    int rc;
-
-    rc = blehostd_fill_addr(&blehostd_server_addr, sock_path);
-    if (rc != 0) {
-        return rc;
-    }
-
-    rc = mn_socket(&blehostd_socket, MN_PF_LOCAL, SOCK_STREAM, 0);
-    if (rc != 0) {
-        return -1;
-    }
-
-    rc = mn_connect(blehostd_socket,
-                    (struct mn_sockaddr *)&blehostd_server_addr);
-    if (rc != 0) {
-        return rc;
-    }
 
     return 0;
 }
@@ -268,19 +270,22 @@ blehostd_enqueue_one(void)
     return 1;
 }
 
-static int
-blehostd_recv_packet(void)
+static void
+blehostd_socket_readable(void *unused, int err)
 {
     struct mn_sockaddr_un from_addr;
     struct os_mbuf *om;
     int enqueued;
     int rc;
 
+    if (err != 0) {
+        /* Socket error. */
+        assert(0);
+    }
+
     rc = mn_recvfrom(blehostd_socket, &om, (void *)&from_addr);
     if (rc != 0) {
-        /* (very) poor man's blocking receive. */
-        os_time_delay(1);
-        return -1;
+        return;
     }
 
     BHD_LOG(DEBUG, "Rxed UDS data:\n");
@@ -300,23 +305,55 @@ blehostd_recv_packet(void)
             break;
         }
     }
-
-    return 0;
 }
 
 static void
-blehostd_task_handler(void *arg)
+blehostd_socket_writable(void *unused, int err)
 {
     int rc;
 
-    rc = blehostd_connect(blehostd_socket_filename);
-    if (rc != 0) {
-        assert(0);
+    rc = os_mutex_pend(&blehostd_mutex, OS_TIMEOUT_NEVER);
+    assert(rc == 0);
+
+    if (blehostd_pending_rsp != NULL) {
+        os_eventq_put(os_eventq_dflt_get(), &blehostd_rsp_mq.mq_ev);
     }
 
-    while (1) {
-        blehostd_recv_packet();
+    rc = os_mutex_release(&blehostd_mutex);
+    assert(rc == 0);
+}
+
+static int
+blehostd_connect(const char *sock_path)
+{
+    static const union mn_socket_cb cbs = {
+        .socket = {
+            .readable = blehostd_socket_readable,
+            .writable = blehostd_socket_writable,
+        },
+    };
+
+    int rc;
+
+    rc = blehostd_fill_addr(&blehostd_server_addr, sock_path);
+    if (rc != 0) {
+        return rc;
     }
+
+    rc = mn_socket(&blehostd_socket, MN_PF_LOCAL, SOCK_STREAM, 0);
+    if (rc != 0) {
+        return -1;
+    }
+
+    mn_socket_set_cbs(blehostd_socket, NULL, &cbs);
+
+    rc = mn_connect(blehostd_socket,
+                    (struct mn_sockaddr *)&blehostd_server_addr);
+    if (rc != 0) {
+        return rc;
+    }
+
+    return 0;
 }
 
 static void
@@ -448,12 +485,16 @@ main(int argc, char **argv)
     rc = os_mqueue_init(&blehostd_rsp_mq, blehostd_process_rsp_mq, NULL);
     assert(rc == 0);
 
-    os_task_init(&blehostd_task, "blehostd", blehostd_task_handler,
-                 NULL, BLEHOSTD_TASK_PRIO, OS_WAIT_FOREVER,
-                 blehostd_stack, BLEHOSTD_STACK_SIZE);
+    rc = os_mutex_init(&blehostd_mutex);
+    assert(rc == 0);
 
     ble_hs_evq_set(os_eventq_dflt_get());
     ble_hs_cfg.sync_cb = blehostd_on_sync;
+
+    rc = blehostd_connect(blehostd_socket_filename);
+    if (rc != 0) {
+        assert(0);
+    }
 
     while (1) {
         os_eventq_run(os_eventq_dflt_get());
