@@ -37,12 +37,6 @@ static const char *blehostd_dev_filename;
 static struct os_mbuf *blehostd_packet;
 static uint16_t blehostd_packet_len;
 
-/* Mbuf that we failed to send due to insufficient socket capacity. */
-static struct os_mbuf *blehostd_pending_rsp;
-
-/* Protects accesses to blehostd_pending_rsp. */
-static struct os_mutex blehostd_mutex;
-
 void
 blehostd_logf(const char *fmt, ...)
 {
@@ -164,26 +158,13 @@ blehostd_process_rsp_mq(struct os_event *ev)
     struct os_mbuf *om;
     int rc;
 
-    rc = os_mutex_pend(&blehostd_mutex, OS_TIMEOUT_NEVER);
-    assert(rc == 0);
-
-    while (1) {
-        if (blehostd_pending_rsp != NULL) {
-            /* We failed to send an mbuf last time; send that one first. */
-            om = blehostd_pending_rsp;
-            blehostd_pending_rsp = NULL;
-        } else {
-            om = os_mqueue_get(&blehostd_rsp_mq);
-            if (om == NULL) {
-                /* Nothing left to send. */
-                break;
-            }
-        }
-
+    while ((om = os_mqueue_get(&blehostd_rsp_mq)) != NULL) {
         rc = blehostd_process_rsp(om);
         if (rc == MN_EAGAIN) {
             /* Socket cannot accommodate packet; try again later. */
-            blehostd_pending_rsp = om;
+            STAILQ_INSERT_HEAD(&blehostd_rsp_mq.mq_head,
+                               OS_MBUF_PKTHDR(om),
+                               omp_next);
             break;
         } else if (rc != 0) {
             BHD_LOG(INFO, "mn_sendto() failed; rc=%d\n", rc);
@@ -191,9 +172,6 @@ blehostd_process_rsp_mq(struct os_event *ev)
             break;
         }
     }
-
-    rc = os_mutex_release(&blehostd_mutex);
-    assert(rc == 0);
 }
 
 static int
@@ -310,17 +288,8 @@ blehostd_socket_readable(void *unused, int err)
 static void
 blehostd_socket_writable(void *unused, int err)
 {
-    int rc;
-
-    rc = os_mutex_pend(&blehostd_mutex, OS_TIMEOUT_NEVER);
-    assert(rc == 0);
-
-    if (blehostd_pending_rsp != NULL) {
-        os_eventq_put(os_eventq_dflt_get(), &blehostd_rsp_mq.mq_ev);
-    }
-
-    rc = os_mutex_release(&blehostd_mutex);
-    assert(rc == 0);
+    /* XXX: Spurious event when there is nothing else left to write. */
+    os_eventq_put(os_eventq_dflt_get(), &blehostd_rsp_mq.mq_ev);
 }
 
 static int
@@ -483,9 +452,6 @@ main(int argc, char **argv)
     assert(rc == 0);
 
     rc = os_mqueue_init(&blehostd_rsp_mq, blehostd_process_rsp_mq, NULL);
-    assert(rc == 0);
-
-    rc = os_mutex_init(&blehostd_mutex);
     assert(rc == 0);
 
     ble_hs_evq_set(os_eventq_dflt_get());
