@@ -1,4 +1,8 @@
 syscfg.defs:
+    BLEHOSTD_VERSION:
+        description: 'The version number of the blehostd application.'
+        value: '"unknown version"'
+
     BLEHOSTD_USE_SOCKET:
        description: 'Use Linux bluetooth sockets to talk to controller'
        value: 1

@@ -396,6 +396,19 @@ bhd_open_log(char *argv0)
     blehostd_log_file = fopen(argv0, "a");
 }
 
+static void
+bhd_handle_version_request(int argc, char **argv)
+{
+    int i;
+
+    for (i = 1; i < argc; i++) {
+        if (strcmp(argv[i], "-v") == 0) {
+            printf("blehostd %s\n", MYNEWT_VAL(BLEHOSTD_VERSION));
+            exit(0);
+        }
+    }
+}
+
 int
 main(int argc, char **argv)
 {
@@ -404,6 +417,8 @@ main(int argc, char **argv)
     int rc;
 
     if (!g_os_started) {
+        bhd_handle_version_request(argc, argv);
+
         if (argc < 3) {
             print_usage(stderr);
             return EXIT_FAILURE;
