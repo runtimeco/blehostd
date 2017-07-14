@@ -32,3 +32,6 @@ syscfg.vals:
 
     # More stability; less correctness.  This is a long-running process.
     MCU_NATIVE_USE_SIGNALS: 0
+
+    # Poll as frequently as possible to increase throughput.
+    NATIVE_SOCKETS_POLL_ITVL: 1
