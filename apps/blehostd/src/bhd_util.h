@@ -29,6 +29,7 @@ const char *bhd_adv_filter_policy_rev_parse(int filter_policy);
 int bhd_send_mtu_changed(uint32_t seq, uint16_t conn_handle, int status,
                          uint16_t mtu);
 int bhd_send_sync_evt(uint32_t seq);
+int bhd_send_reset_evt(bhd_seq_t seq, int reason);
 
 long long int bhd_process_json_int(const cJSON *item, int *rc);
 long long int bhd_json_int(const cJSON *parent, const char *name, int *rc);

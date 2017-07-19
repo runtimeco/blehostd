@@ -45,17 +45,18 @@ static const struct bhd_kv_str_int bhd_type_map[] = {
     { "adv_rsp_set_data",   BHD_MSG_TYPE_ADV_RSP_SET_DATA },
     { "adv_fields",         BHD_MSG_TYPE_ADV_FIELDS },
 
-    { "sync_evt",       BHD_MSG_TYPE_SYNC_EVT },
-    { "connect_evt",    BHD_MSG_TYPE_CONNECT_EVT },
-    { "disconnect_evt", BHD_MSG_TYPE_DISCONNECT_EVT },
-    { "disc_svc_evt",   BHD_MSG_TYPE_DISC_SVC_EVT },
-    { "disc_chr_evt",   BHD_MSG_TYPE_DISC_CHR_EVT },
-    { "write_ack_evt",  BHD_MSG_TYPE_WRITE_ACK_EVT },
-    { "notify_rx_evt",  BHD_MSG_TYPE_NOTIFY_RX_EVT },
-    { "mtu_change_evt", BHD_MSG_TYPE_MTU_CHANGE_EVT },
-    { "scan_evt",       BHD_MSG_TYPE_SCAN_EVT },
-    { "scan_tmo_evt",   BHD_MSG_TYPE_SCAN_TMO_EVT },
-    { "enc_change_evt", BHD_MSG_TYPE_ENC_CHANGE_EVT },
+    { "sync_evt",           BHD_MSG_TYPE_SYNC_EVT },
+    { "connect_evt",        BHD_MSG_TYPE_CONNECT_EVT },
+    { "disconnect_evt",     BHD_MSG_TYPE_DISCONNECT_EVT },
+    { "disc_svc_evt",       BHD_MSG_TYPE_DISC_SVC_EVT },
+    { "disc_chr_evt",       BHD_MSG_TYPE_DISC_CHR_EVT },
+    { "write_ack_evt",      BHD_MSG_TYPE_WRITE_ACK_EVT },
+    { "notify_rx_evt",      BHD_MSG_TYPE_NOTIFY_RX_EVT },
+    { "mtu_change_evt",     BHD_MSG_TYPE_MTU_CHANGE_EVT },
+    { "scan_evt",           BHD_MSG_TYPE_SCAN_EVT },
+    { "scan_tmo_evt",       BHD_MSG_TYPE_SCAN_TMO_EVT },
+    { "enc_change_evt",     BHD_MSG_TYPE_ENC_CHANGE_EVT },
+    { "reset_evt",          BHD_MSG_TYPE_RESET_EVT },
 
     { 0 },
 };
@@ -1084,6 +1085,23 @@ bhd_send_sync_evt(bhd_seq_t seq)
     evt.hdr.seq = seq;
 
     evt.sync.synced = ble_hs_synced();
+
+    rc = bhd_evt_send(&evt);
+    return rc;
+}
+
+int
+bhd_send_reset_evt(bhd_seq_t seq, int reason)
+{
+    struct bhd_evt evt;
+    int rc;
+
+    memset(&evt, 0, sizeof(evt));
+    evt.hdr.op = BHD_MSG_OP_EVT;
+    evt.hdr.type = BHD_MSG_TYPE_RESET_EVT;
+    evt.hdr.seq = seq;
+
+    evt.reset.reason = reason;
 
     rc = bhd_evt_send(&evt);
     return rc;

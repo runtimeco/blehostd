@@ -46,6 +46,7 @@
 #define BHD_MSG_TYPE_SCAN_EVT               2057
 #define BHD_MSG_TYPE_SCAN_TMO_EVT           2058
 #define BHD_MSG_TYPE_ENC_CHANGE_EVT         2059
+#define BHD_MSG_TYPE_RESET_EVT              2060
 
 #define BHD_ADDR_TYPE_NONE                  255
 
@@ -530,6 +531,10 @@ struct bhd_enc_change_evt {
     int status;
 };
 
+struct bhd_reset_evt {
+    int reason;
+};
+
 struct bhd_evt {
     struct bhd_msg_hdr hdr;
     union {
@@ -543,6 +548,7 @@ struct bhd_evt {
         struct bhd_mtu_change_evt mtu_change;
         struct bhd_scan_evt scan;
         struct bhd_enc_change_evt enc_change;
+        struct bhd_reset_evt reset;
     };
 };
 

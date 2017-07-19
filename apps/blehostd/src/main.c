@@ -375,6 +375,15 @@ blehostd_on_sync(void)
 }
 
 static void
+blehostd_on_reset(int reason)
+{
+    int rc;
+
+    rc = bhd_send_reset_evt(bhd_next_evt_seq(), reason);
+    assert(rc == 0);
+}
+
+static void
 print_usage(FILE *stream)
 {
     fprintf(stream, "usage: blehostd <controller-device> <socket-path>\n");
@@ -471,6 +480,7 @@ main(int argc, char **argv)
 
     ble_hs_evq_set(os_eventq_dflt_get());
     ble_hs_cfg.sync_cb = blehostd_on_sync;
+    ble_hs_cfg.reset_cb = blehostd_on_reset;
 
     rc = blehostd_connect(blehostd_socket_filename);
     if (rc != 0) {
