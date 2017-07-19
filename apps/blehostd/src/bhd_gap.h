@@ -15,5 +15,6 @@ void bhd_gap_adv_set_data(const struct bhd_req *req,
                           struct bhd_rsp *out_rsp);
 void bhd_gap_adv_rsp_set_data(const struct bhd_req *req,
                               struct bhd_rsp *out_rsp);
+void bhd_gap_adv_fields(const struct bhd_req *req, struct bhd_rsp *out_rsp);
 
 #endif

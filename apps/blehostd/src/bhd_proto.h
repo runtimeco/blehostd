@@ -34,6 +34,10 @@
 #define BHD_MSG_TYPE_ADV_SET_DATA           23
 #define BHD_MSG_TYPE_ADV_RSP_SET_DATA       24
 #define BHD_MSG_TYPE_ADV_FIELDS             25
+#define BHD_MSG_TYPE_CLEAR_SVCS             26
+#define BHD_MSG_TYPE_ADD_SVCS               27
+#define BHD_MSG_TYPE_COMMIT_SVCS            28
+#define BHD_MSG_TYPE_ACCESS_STATUS          29
 
 #define BHD_MSG_TYPE_SYNC_EVT               2049
 #define BHD_MSG_TYPE_CONNECT_EVT            2050
@@ -47,12 +51,17 @@
 #define BHD_MSG_TYPE_SCAN_TMO_EVT           2058
 #define BHD_MSG_TYPE_ENC_CHANGE_EVT         2059
 #define BHD_MSG_TYPE_RESET_EVT              2060
+#define BHD_MSG_TYPE_ACCESS_EVT             2061
 
 #define BHD_ADDR_TYPE_NONE                  255
 
 #define BHD_SEQ_MIN                         0
 #define BHD_SEQ_EVT_MIN                     0xffffff00
 #define BHD_SEQ_MAX                         0xfffffff0
+
+#define BHD_REG_MAX_SVCS                    32
+#define BHD_SVC_MAX_CHRS                    16
+#define BHD_CHR_MAX_DSCS                    4
 
 struct bhd_msg_hdr {
     int op;
@@ -235,6 +244,38 @@ struct bhd_adv_fields_req {
     uint8_t mfg_data_len;
 };
 
+struct bhd_dsc {
+    ble_uuid_any_t uuid;
+    uint8_t att_flags;
+    uint8_t min_key_size;
+};
+
+struct bhd_chr {
+    ble_uuid_any_t uuid;
+    ble_gatt_chr_flags flags;
+    uint8_t min_key_size;
+    struct bhd_dsc *dscs;
+    int num_dscs;
+};
+
+struct bhd_svc {
+    uint8_t type;
+    ble_uuid_any_t uuid;
+    struct bhd_chr *chrs;
+    int num_chrs;
+
+    /* XXX: Includes. */
+};
+
+struct bhd_add_svcs_req {
+    struct bhd_svc *svcs;
+    int num_svcs;
+};
+
+struct bhd_access_status_req {
+    uint8_t att_status;
+};
+
 struct bhd_req {
     struct bhd_msg_hdr hdr;
     union {
@@ -256,6 +297,8 @@ struct bhd_req {
         struct bhd_adv_set_data_req adv_set_data;
         struct bhd_adv_rsp_set_data_req adv_rsp_set_data;
         struct bhd_adv_fields_req adv_fields;
+        struct bhd_add_svcs_req add_svcs;
+        struct bhd_access_status_req access_status;
     };
 };
 
@@ -375,6 +418,44 @@ struct bhd_adv_fields_rsp {
     int data_len;
 };
 
+struct bhd_clear_svcs_rsp {
+    int status;
+};
+
+struct bhd_add_svcs_rsp {
+    int status;
+};
+
+struct bhd_commit_dsc {
+    ble_uuid_any_t uuid;
+    uint16_t handle;
+};
+
+struct bhd_commit_chr {
+    ble_uuid_any_t uuid;
+    uint16_t def_handle;
+    uint16_t val_handle;
+    struct bhd_commit_dsc *dscs;
+    int num_dscs;
+};
+
+struct bhd_commit_svc {
+    ble_uuid_any_t uuid;
+    uint16_t handle;
+    struct bhd_commit_chr *chrs;
+    int num_chrs;
+};
+
+struct bhd_commit_svcs_rsp {
+    int status;
+    struct bhd_commit_svc *svcs;
+    int num_svcs;
+};
+
+struct bhd_access_status_rsp {
+    int status;
+};
+
 struct bhd_rsp {
     struct bhd_msg_hdr hdr;
     union {
@@ -401,6 +482,10 @@ struct bhd_rsp {
         struct bhd_adv_set_data_rsp adv_set_data;
         struct bhd_adv_rsp_set_data_rsp adv_rsp_set_data;
         struct bhd_adv_fields_rsp adv_fields;
+        struct bhd_clear_svcs_rsp clear_svcs;
+        struct bhd_add_svcs_rsp add_svcs;
+        struct bhd_commit_svcs_rsp commit_svcs;
+        struct bhd_access_status_rsp access_status;
     };
 };
 
@@ -535,6 +620,14 @@ struct bhd_reset_evt {
     int reason;
 };
 
+struct bhd_access_evt {
+    uint8_t access_op;
+    uint16_t conn_handle;
+    uint16_t att_handle;
+    uint8_t *data;
+    int data_len;
+};
+
 struct bhd_evt {
     struct bhd_msg_hdr hdr;
     union {
@@ -549,6 +642,7 @@ struct bhd_evt {
         struct bhd_scan_evt scan;
         struct bhd_enc_change_evt enc_change;
         struct bhd_reset_evt reset;
+        struct bhd_access_evt access;
     };
 };
 

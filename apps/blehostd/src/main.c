@@ -12,6 +12,7 @@
 #include "blehostd.h"
 #include "bhd_proto.h"
 #include "bhd_util.h"
+#include "bhd_gatts.h"
 #include "syscfg/syscfg.h"
 #include "sysinit/sysinit.h"
 #include "os/os.h"
@@ -21,10 +22,17 @@
 #include "host/ble_hs.h"
 #include "defs/error.h"
 
+#define BLEHOSTD_STACK_SIZE     (OS_STACK_ALIGN(512))
+#define BLEHOSTD_TASK_PRIO      3
+
 #define BLEHOSTD_MAX_MSG_SZ     10240
 
 static FILE *blehostd_log_file;
 
+static struct os_task blehostd_task;
+static os_stack_t blehostd_stack[BLEHOSTD_STACK_SIZE];
+
+static struct os_eventq blehostd_evq;
 static struct os_mqueue blehostd_req_mq;
 static struct os_mqueue blehostd_rsp_mq;
 
@@ -129,7 +137,7 @@ blehostd_enqueue_rsp(const char *json_rsp)
         goto err;
     }
 
-    rc = os_mqueue_put(&blehostd_rsp_mq, os_eventq_dflt_get(), om);
+    rc = os_mqueue_put(&blehostd_rsp_mq, &blehostd_evq, om);
     assert(rc == 0);
 
     return 0;
@@ -242,7 +250,7 @@ blehostd_enqueue_one(void)
         blehostd_packet_len = 0;
     }
 
-    rc = os_mqueue_put(&blehostd_req_mq, os_eventq_dflt_get(), om);
+    rc = os_mqueue_put(&blehostd_req_mq, &blehostd_evq, om);
     assert(rc == 0);
 
     return 1;
@@ -323,6 +331,19 @@ blehostd_connect(const char *sock_path)
     }
 
     return 0;
+}
+
+static void
+blehostd_task_handler(void *arg)
+{
+    int rc;
+
+    rc = blehostd_connect(blehostd_socket_filename);
+    assert(rc == 0);
+
+    while (1) {
+        os_eventq_run(&blehostd_evq);
+    }
 }
 
 static void
@@ -472,20 +493,23 @@ main(int argc, char **argv)
     cjson_hooks.free_fn = free;
     cJSON_InitHooks(&cjson_hooks);
 
+    os_eventq_init(&blehostd_evq);
+
     rc = os_mqueue_init(&blehostd_req_mq, blehostd_process_req_mq, NULL);
     assert(rc == 0);
 
     rc = os_mqueue_init(&blehostd_rsp_mq, blehostd_process_rsp_mq, NULL);
     assert(rc == 0);
 
+    os_task_init(&blehostd_task, "blehostd", blehostd_task_handler,
+                 NULL, BLEHOSTD_TASK_PRIO, OS_WAIT_FOREVER,
+                 blehostd_stack, BLEHOSTD_STACK_SIZE);
+
     ble_hs_evq_set(os_eventq_dflt_get());
     ble_hs_cfg.sync_cb = blehostd_on_sync;
     ble_hs_cfg.reset_cb = blehostd_on_reset;
 
-    rc = blehostd_connect(blehostd_socket_filename);
-    if (rc != 0) {
-        assert(0);
-    }
+    bhd_gatts_init();
 
     while (1) {
         os_eventq_run(os_eventq_dflt_get());

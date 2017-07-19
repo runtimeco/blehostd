@@ -470,3 +470,127 @@ bhd_gap_adv_rsp_set_data(const struct bhd_req *req, struct bhd_rsp *out_rsp)
                                  req->adv_rsp_set_data.data_len);
 
 }
+
+void
+bhd_gap_adv_fields(const struct bhd_req *req, struct bhd_rsp *out_rsp)
+{
+    ble_uuid128_t uuids128[BLE_HS_ADV_MAX_FIELD_SZ / 16];
+    ble_uuid16_t uuids16[BLE_HS_ADV_MAX_FIELD_SZ / 2];
+    ble_uuid32_t uuids32[BLE_HS_ADV_MAX_FIELD_SZ / 4];
+    struct ble_hs_adv_fields fields = {0};
+    struct bhd_adv_fields_req r;
+    uint8_t slave_itvl_range[4];
+    uint8_t data_len;
+    int i;
+
+    /* Make a copy of the request to get a non-const version. */
+    r = req->adv_fields;
+
+    fields.flags = req->adv_fields.flags;
+
+    if (r.num_uuids16 > 0) {
+        if (r.num_uuids16 > sizeof uuids16 / sizeof uuids16[0]) {
+            goto err;
+        }
+
+        for (i = 0; i < r.num_uuids16; i++) {
+            uuids16[i] = (ble_uuid16_t)BLE_UUID16_INIT(r.uuids16[i]);
+        }
+
+        fields.uuids16 = uuids16;
+        fields.num_uuids16 = r.num_uuids16;
+        fields.uuids16_is_complete = r.uuids16_is_complete;
+    }
+
+    if (r.num_uuids32 > 0) {
+        if (r.num_uuids32 > sizeof uuids32 / sizeof uuids32[0]) {
+            goto err;
+        }
+
+        for (i = 0; i < r.num_uuids32; i++) {
+            uuids32[i] = (ble_uuid32_t)BLE_UUID32_INIT(r.uuids32[i]);
+        }
+
+        fields.uuids32 = uuids32;
+        fields.num_uuids32 = r.num_uuids32;
+        fields.uuids32_is_complete = r.uuids32_is_complete;
+    }
+
+    if (r.num_uuids128 > 0) {
+        if (r.num_uuids128 > sizeof uuids128 / sizeof uuids128[0]) {
+            goto err;
+        }
+
+        for (i = 0; i < r.num_uuids128; i++) {
+            uuids128[i].u.type = BLE_UUID_TYPE_128;
+            memcpy(uuids128[i].value, r.uuids128[i], 16);
+        }
+
+        fields.uuids128 = uuids128;
+        fields.num_uuids128 = r.num_uuids128;
+        fields.uuids128_is_complete = r.uuids128_is_complete;
+    }
+
+    if (r.name_len > 0) {
+        fields.name = r.name;
+        fields.name_len = r.name_len;
+        fields.name_is_complete = r.name_is_complete;
+    }
+
+    fields.tx_pwr_lvl = r.tx_pwr_lvl;
+    fields.tx_pwr_lvl_is_present = r.tx_pwr_lvl_is_present;
+
+    if (r.slave_itvl_range_is_present) {
+        put_be16(slave_itvl_range + 0, r.slave_itvl_min);
+        put_be16(slave_itvl_range + 2, r.slave_itvl_max);
+        fields.slave_itvl_range = slave_itvl_range;
+    }
+
+    if (r.svc_data_uuid16_len > 0) {
+        fields.svc_data_uuid16 = r.svc_data_uuid16;
+        fields.svc_data_uuid16_len = r.svc_data_uuid16_len;
+    }
+
+    if (r.num_public_tgt_addrs > 0) {
+        fields.public_tgt_addr = r.public_tgt_addrs[0];
+        fields.num_public_tgt_addrs = r.num_public_tgt_addrs;
+    }
+
+    fields.appearance = r.appearance;
+    fields.appearance_is_present = r.appearance_is_present;
+
+    fields.adv_itvl = r.adv_itvl;
+    fields.adv_itvl_is_present = r.adv_itvl_is_present;
+
+    if (r.svc_data_uuid32_len > 0) {
+        fields.svc_data_uuid32 = r.svc_data_uuid32;
+        fields.svc_data_uuid32_len = r.svc_data_uuid32_len;
+    }
+
+    if (r.svc_data_uuid128_len > 0) {
+        fields.svc_data_uuid128 = r.svc_data_uuid128;
+        fields.svc_data_uuid128_len = r.svc_data_uuid128_len;
+    }
+
+    if (r.uri_len > 0) {
+        fields.uri = r.uri;
+        fields.uri_len = r.uri_len;
+    }
+
+    if (r.mfg_data_len > 0) {
+        fields.mfg_data = r.mfg_data;
+        fields.mfg_data_len = r.mfg_data_len;
+    }
+
+    out_rsp->adv_fields.status =
+        ble_hs_adv_set_fields(&fields, out_rsp->adv_fields.data,
+                              &data_len, sizeof out_rsp->adv_fields.data);
+    if (out_rsp->adv_fields.status == 0) {
+        out_rsp->adv_fields.data_len = data_len;
+    }
+
+    return;
+
+err:
+    out_rsp->adv_fields.status = BLE_HS_EINVAL;
+}

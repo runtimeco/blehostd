@@ -2,6 +2,10 @@
 #define H_BHD_UTIL_
 
 #include "cjson/cJSON.h"
+struct bhd_access_evt;
+struct bhd_commit_dsc;
+struct bhd_commit_chr;
+struct bhd_commit_svc;
 
 typedef int bhd_json_fn(const cJSON *item, int *rc, void *arg);
 
@@ -25,11 +29,16 @@ int bhd_adv_disc_mode_parse(const char *disc_mode_str);
 const char *bhd_adv_disc_mode_rev_parse(int disc_mode);
 int bhd_adv_filter_policy_parse(const char *filter_policy_str);
 const char *bhd_adv_filter_policy_rev_parse(int filter_policy);
+int bhd_svc_type_parse(const char *svc_type_str);
+const char *bhd_svc_type_rev_parse(int svc_type);
+int bhd_gatt_access_op_parse(const char *gatt_access_op_str);
+const char *bhd_gatt_access_op_rev_parse(int gatt_access_op);
 
 int bhd_send_mtu_changed(uint32_t seq, uint16_t conn_handle, int status,
                          uint16_t mtu);
 int bhd_send_sync_evt(uint32_t seq);
 int bhd_send_reset_evt(bhd_seq_t seq, int reason);
+int bhd_send_access_evt(bhd_seq_t seq, const struct bhd_access_evt *access);
 
 long long int bhd_process_json_int(const cJSON *item, int *rc);
 long long int bhd_json_int(const cJSON *parent, const char *name, int *rc);
@@ -74,11 +83,18 @@ uint8_t *bhd_json_addr(const cJSON *parent, const char *name, uint8_t *dst,
 ble_uuid_t *
 bhd_json_uuid(const cJSON *parent, const char *name, ble_uuid_any_t *dst,
               int *status);
+int bhd_json_dsc(cJSON *parent, struct bhd_dsc *out_dsc, char **out_err);
+int bhd_json_chr(cJSON *parent, struct bhd_chr *out_chr, char **out_err);
+int bhd_json_svc(cJSON *parent, struct bhd_svc *out_svc, char **out_err);
+void bhd_destroy_chr(struct bhd_chr *chr);
+void bhd_destroy_svc(struct bhd_svc *svc);
+
 cJSON *bhd_json_create_byte_string(const uint8_t *data, int len);
 cJSON *bhd_json_create_uuid(const ble_uuid_t *uuid);
 cJSON *bhd_json_create_uuid128_bytes(const uint8_t uuid128_bytes[16]);
 void bhd_json_add_int(cJSON *parent, const char *name, intmax_t val);
 void bhd_json_add_bool(cJSON *parent, const char *name, int val);
+cJSON * bhd_json_add_object(cJSON *parent, const char *name);
 void bhd_json_add_bytes(cJSON *parent, const char *name, const uint8_t *data,
                         int len);
 void bhd_json_add_uuid(cJSON *parent, const char *name,
@@ -87,9 +103,15 @@ cJSON *bhd_json_create_addr(const uint8_t *addr);
 int bhd_json_add_addr_type(cJSON *parent, const char *name, uint8_t addr_type);
 int bhd_json_add_adv_event_type(cJSON *parent, const char *name,
                                 uint8_t adv_event_type);
+int bhd_json_add_gatt_access_op(cJSON *parent, const char *name,
+                                uint8_t gatt_access_op);
+cJSON *bhd_json_create_commit_dsc(const struct bhd_commit_dsc *dsc);
+cJSON *bhd_json_create_commit_chr(const struct bhd_commit_chr *chr);
+cJSON *bhd_json_create_commit_svc(const struct bhd_commit_svc *svc);
 int bhd_json_add_addr(cJSON *parent, const char *name, const uint8_t *addr);
 
 char *bhd_mbuf_to_s(const struct os_mbuf *om, char *str, size_t maxlen);
+int bhd_arr_len(const cJSON *arr);
 
 /**
  * Populates a JSON array with values from the specified C array and inserts it

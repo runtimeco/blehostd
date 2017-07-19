@@ -44,6 +44,10 @@ static const struct bhd_kv_str_int bhd_type_map[] = {
     { "adv_set_data",       BHD_MSG_TYPE_ADV_SET_DATA },
     { "adv_rsp_set_data",   BHD_MSG_TYPE_ADV_RSP_SET_DATA },
     { "adv_fields",         BHD_MSG_TYPE_ADV_FIELDS },
+    { "clear_svcs",         BHD_MSG_TYPE_CLEAR_SVCS },
+    { "add_svcs",           BHD_MSG_TYPE_ADD_SVCS },
+    { "commit_svcs",        BHD_MSG_TYPE_COMMIT_SVCS },
+    { "access_status",      BHD_MSG_TYPE_ACCESS_STATUS },
 
     { "sync_evt",           BHD_MSG_TYPE_SYNC_EVT },
     { "connect_evt",        BHD_MSG_TYPE_CONNECT_EVT },
@@ -57,6 +61,7 @@ static const struct bhd_kv_str_int bhd_type_map[] = {
     { "scan_tmo_evt",       BHD_MSG_TYPE_SCAN_TMO_EVT },
     { "enc_change_evt",     BHD_MSG_TYPE_ENC_CHANGE_EVT },
     { "reset_evt",          BHD_MSG_TYPE_RESET_EVT },
+    { "access_evt",         BHD_MSG_TYPE_ACCESS_EVT },
 
     { 0 },
 };
@@ -106,6 +111,19 @@ static const struct bhd_kv_str_int bhd_adv_filter_policy_map[] = {
     { "conn",           BLE_HCI_ADV_FILT_CONN },
     { "both",           BLE_HCI_ADV_FILT_BOTH },
     { 0 },
+};
+
+static const struct bhd_kv_str_int bhd_svc_type_map[] = {
+    { "primary",        BLE_GATT_SVC_TYPE_PRIMARY },
+    { "secondary",      BLE_GATT_SVC_TYPE_SECONDARY },
+    { 0 },
+};
+
+static const struct bhd_kv_str_int bhd_gatt_access_op_map[] = {
+    { "read_chr",       BLE_GATT_ACCESS_OP_READ_CHR },
+    { "write_chr",      BLE_GATT_ACCESS_OP_WRITE_CHR },
+    { "read_dsc",       BLE_GATT_ACCESS_OP_READ_DSC },
+    { "write_dsc",      BLE_GATT_ACCESS_OP_WRITE_DSC },
 };
 
 const struct bhd_kv_str_int *
@@ -265,6 +283,30 @@ bhd_adv_filter_policy_rev_parse(int filter_policy)
     return bhd_kv_str_int_rev_find(bhd_adv_filter_policy_map, filter_policy);
 }
 
+int
+bhd_svc_type_parse(const char *svc_type_str)
+{
+    return bhd_kv_str_int_find(bhd_svc_type_map, svc_type_str);
+}
+
+const char *
+bhd_svc_type_rev_parse(int svc_type)
+{
+    return bhd_kv_str_int_rev_find(bhd_svc_type_map, svc_type);
+}
+
+int
+bhd_gatt_access_op_parse(const char *gatt_access_op_str)
+{
+    return bhd_kv_str_int_find(bhd_gatt_access_op_map, gatt_access_op_str);
+}
+
+const char *
+bhd_gatt_access_op_rev_parse(int gatt_access_op)
+{
+    return bhd_kv_str_int_rev_find(bhd_gatt_access_op_map, gatt_access_op);
+}
+
 long long int
 bhd_process_json_int(const cJSON *item, int *rc)
 {
@@ -394,7 +436,7 @@ bhd_json_int_bounds(const cJSON *parent, const char *name,
     item = cJSON_GetObjectItem(parent, name);
     if (item == NULL) {
         *rc = SYS_ENOENT;
-        return -1;
+        return 0;
     }
 
     return bhd_process_json_int_bounds(item, minval, maxval, rc);
@@ -703,10 +745,6 @@ bhd_json_kv(bhd_kv_parse_fn *parse_cb,
         }
         return valnum;
 
-    case SYS_ENOENT:
-        *rc = SYS_ERANGE;
-        return -1;
-
     default:
         return -1;
     }
@@ -740,6 +778,12 @@ int
 bhd_json_adv_filter_policy(const cJSON *parent, const char *name, int *rc)
 {
     return bhd_json_kv(bhd_adv_filter_policy_parse, parent, name, rc);
+}
+
+int
+bhd_json_svc_type(const cJSON *parent, const char *name, int *rc)
+{
+    return bhd_json_kv(bhd_svc_type_parse, parent, name, rc);
 }
 
 uint8_t *
@@ -832,6 +876,151 @@ bhd_json_uuid(const cJSON *parent, const char *name, ble_uuid_any_t *dst,
     return &dst->u;
 }
 
+int
+bhd_json_dsc(cJSON *parent, struct bhd_dsc *out_dsc, char **out_err)
+{
+    int rc;
+
+    bhd_json_uuid(parent, "uuid", &out_dsc->uuid, &rc);
+    if (rc != 0) {
+        *out_err = "invalid descriptor UUID";
+        return rc;
+    }
+
+    out_dsc->att_flags = bhd_json_int_bounds(parent, "att_flags", 0, UINT8_MAX,
+                                             &rc);
+    if (rc != 0) {
+        *out_err = "invalid descriptor att_flags";
+        return rc;
+    }
+
+    out_dsc->min_key_size = bhd_json_int_bounds(parent, "min_key_size", 0,
+                                                UINT8_MAX, &rc);
+    if (rc != 0) {
+        *out_err = "invalid descriptor flags";
+        return rc;
+    }
+
+    return 0;
+}
+
+int
+bhd_json_chr(cJSON *parent, struct bhd_chr *out_chr, char **out_err)
+{
+    cJSON *item;
+    cJSON *arr;
+    int rc;
+
+    bhd_json_uuid(parent, "uuid", &out_chr->uuid, &rc);
+    if (rc != 0) {
+        *out_err = "invalid characteristic UUID";
+        return rc;
+    }
+
+    out_chr->flags = bhd_json_int_bounds(parent, "flags", 0, UINT16_MAX, &rc);
+    if (rc != 0) {
+        *out_err = "invalid characteristic flags";
+        return rc;
+    }
+
+    out_chr->min_key_size = bhd_json_int_bounds(parent, "min_key_size", 0,
+                                                UINT8_MAX, &rc);
+    if (rc != 0) {
+        *out_err = "invalid characteristic flags";
+        return rc;
+    }
+
+    arr = bhd_json_arr(parent, "descriptors", &rc);
+    switch (rc) {
+    case 0:
+        out_chr->num_dscs = bhd_arr_len(arr);
+        out_chr->dscs = malloc_success(
+            out_chr->num_dscs * sizeof *out_chr->dscs);
+
+        cJSON_ArrayForEach(item, arr) {
+            rc = bhd_json_dsc(item, out_chr->dscs + out_chr->num_dscs,
+                              out_err);
+            if (rc != 0) {
+                return rc;
+            }
+        }
+        break;
+
+    case SYS_ENOENT:
+        break;
+
+    default:
+        *out_err = "invalid descriptors";
+        return rc;
+    }
+
+    return 0;
+}
+
+int
+bhd_json_svc(cJSON *parent, struct bhd_svc *out_svc, char **out_err)
+{
+    cJSON *item;
+    cJSON *arr;
+    int rc;
+    int ci;
+
+    out_svc->type = bhd_json_svc_type(parent, "type", &rc);
+    if (rc != 0) {
+        *out_err = "invalid service type";
+        return rc;
+    }
+
+    bhd_json_uuid(parent, "uuid", &out_svc->uuid, &rc);
+    if (rc != 0) {
+        *out_err = "invalid service UUID";
+        return rc;
+    }
+
+    arr = bhd_json_arr(parent, "characteristics", &rc);
+    switch (rc) {
+    case 0:
+        out_svc->num_chrs = bhd_arr_len(arr);
+        out_svc->chrs = malloc_success(
+            out_svc->num_chrs * sizeof *out_svc->chrs);
+
+        ci = 0;
+        cJSON_ArrayForEach(item, arr) {
+            rc = bhd_json_chr(item, out_svc->chrs + ci, out_err);
+            if (rc != 0) {
+                return rc;
+            }
+            ci++;
+        }
+        break;
+
+    case SYS_ENOENT:
+        break;
+
+    default:
+        *out_err = "invalid characteristics";
+        return rc;
+    }
+
+    return 0;
+}
+
+void
+bhd_destroy_chr(struct bhd_chr *chr)
+{
+    free(chr->dscs);
+}
+
+void
+bhd_destroy_svc(struct bhd_svc *svc)
+{
+    int i;
+
+    for (i = 0; i < svc->num_chrs; i++) {
+        bhd_destroy_chr(svc->chrs + i);
+    }
+}
+
 cJSON *
 bhd_json_create_byte_string(const uint8_t *data, int len)
 {
@@ -839,7 +1028,7 @@ bhd_json_create_byte_string(const uint8_t *data, int len)
     char *buf;
     int max_len;
 
-    assert(len > 0);
+    assert(len >= 0);
 
     max_len = len * 5; /* 0xXX: */
 
@@ -849,6 +1038,19 @@ bhd_json_create_byte_string(const uint8_t *data, int len)
     item = cJSON_CreateString(buf);
 
     free(buf);
+    return item;
+}
+
+cJSON *
+bhd_json_add_object(cJSON *parent, const char *name)
+{
+    struct cJSON *item;
+
+    item = cJSON_CreateObject();
+    if (item == NULL) {
+        return NULL;
+    }
+    cJSON_AddItemToObject(parent, name, item);
     return item;
 }
 
@@ -966,15 +1168,93 @@ bhd_json_add_adv_event_type(cJSON *parent, const char *name,
     return 0;
 }
 
-#if 0
-cJSON *
-bhd_json_create_arr(const void *data, int num_elems, int elem_szkO
+int
+bhd_json_add_gatt_access_op(cJSON *parent, const char *name,
+                            uint8_t gatt_access_op)
 {
-    char valstr[18];
+    const char *valstr;
 
-    return cJSON_CreateString(bhd_addr_str(valstr, addr));
+    valstr = bhd_gatt_access_op_rev_parse(gatt_access_op);
+    if (valstr == NULL) {
+        return SYS_EINVAL;
+    }
+
+    cJSON_AddStringToObject(parent, name, valstr);
+    return 0;
 }
-#endif
+
+cJSON *
+bhd_json_create_commit_dsc(const struct bhd_commit_dsc *dsc)
+{
+    cJSON *item;
+
+    item = cJSON_CreateObject();
+    bhd_json_add_uuid(item, "uuid", &dsc->uuid.u);
+    bhd_json_add_int(item, "handle", dsc->handle);
+
+    return item;
+}
+
+cJSON *
+bhd_json_create_commit_chr(const struct bhd_commit_chr *chr)
+{
+    cJSON *item;
+    cJSON *dscs;
+    cJSON *dsc;
+    int i;
+
+    item = cJSON_CreateObject();
+    bhd_json_add_uuid(item, "uuid", &chr->uuid.u);
+    bhd_json_add_int(item, "def_handle", chr->def_handle);
+    bhd_json_add_int(item, "val_handle", chr->val_handle);
+
+    dscs = cJSON_CreateArray();
+    for (i = 0; i < chr->num_dscs; i++) {
+        dsc = bhd_json_create_commit_dsc(chr->dscs + i);
+        cJSON_AddItemToArray(dscs, dsc);
+    }
+    cJSON_AddItemToObject(item, "descriptors", dscs);
+
+    return item;
+}
+
+cJSON *
+bhd_json_create_commit_svc(const struct bhd_commit_svc *svc)
+{
+    cJSON *item;
+    cJSON *chrs;
+    cJSON *chr;
+    int i;
+
+    item = cJSON_CreateObject();
+    if (item == NULL) {
+        goto err;
+    }
+
+    bhd_json_add_uuid(item, "uuid", &svc->uuid.u);
+    bhd_json_add_int(item, "handle", svc->handle);
+
+    chrs = cJSON_CreateArray();
+    if (chrs == NULL) {
+        goto err;
+    }
+
+    for (i = 0; i < svc->num_chrs; i++) {
+        chr = bhd_json_create_commit_chr(svc->chrs + i);
+        if (chr == NULL) {
+            goto err;
+        }
+
+        cJSON_AddItemToArray(chrs, chr);
+    }
+    cJSON_AddItemToObject(item, "characteristics", chrs);
+
+    return item;
+
+err:
+    cJSON_Delete(item);
+    return NULL;
+}
 
 char *
 bhd_hex_str(char *dst, int max_dst_len, int *out_dst_len, const uint8_t *src,
@@ -1107,6 +1387,22 @@ bhd_send_reset_evt(bhd_seq_t seq, int reason)
     return rc;
 }
 
+int
+bhd_send_access_evt(bhd_seq_t seq, const struct bhd_access_evt *access)
+{
+    struct bhd_evt evt;
+    int rc;
+
+    evt.hdr.op = BHD_MSG_OP_EVT;
+    evt.hdr.type = BHD_MSG_TYPE_ACCESS_EVT;
+    evt.hdr.seq = seq;
+
+    evt.access = *access;
+
+    rc = bhd_evt_send(&evt);
+    return rc;
+}
+
 char *
 bhd_mbuf_to_s(const struct os_mbuf *om, char *str, size_t maxlen)
 {
@@ -1137,4 +1433,18 @@ bhd_mbuf_to_s(const struct os_mbuf *om, char *str, size_t maxlen)
     }
 
     return str;
+}
+
+int
+bhd_arr_len(const cJSON *arr)
+{
+    const cJSON *child;
+    int len;
+
+    len = 0;
+    for (child = arr->child; child != NULL; child = child->next) {
+        len++;
+    }
+
+    return len;
 }

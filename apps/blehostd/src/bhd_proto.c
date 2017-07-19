@@ -5,6 +5,7 @@
 #include "blehostd.h"
 #include "bhd_proto.h"
 #include "bhd_gattc.h"
+#include "bhd_gatts.h"
 #include "bhd_gap.h"
 #include "bhd_util.h"
 #include "bhd_id.h"
@@ -40,6 +41,10 @@ static bhd_req_run_fn bhd_adv_stop_req_run;
 static bhd_req_run_fn bhd_adv_set_data_req_run;
 static bhd_req_run_fn bhd_adv_rsp_set_data_req_run;
 static bhd_req_run_fn bhd_adv_fields_req_run;
+static bhd_req_run_fn bhd_clear_svcs_req_run;
+static bhd_req_run_fn bhd_add_svcs_req_run;
+static bhd_req_run_fn bhd_commit_svcs_req_run;
+static bhd_req_run_fn bhd_access_status_req_run;
 
 static const struct bhd_req_dispatch_entry {
     int req_type;
@@ -69,6 +74,10 @@ static const struct bhd_req_dispatch_entry {
     { BHD_MSG_TYPE_ADV_SET_DATA,        bhd_adv_set_data_req_run },
     { BHD_MSG_TYPE_ADV_RSP_SET_DATA,    bhd_adv_rsp_set_data_req_run },
     { BHD_MSG_TYPE_ADV_FIELDS,          bhd_adv_fields_req_run },
+    { BHD_MSG_TYPE_CLEAR_SVCS,          bhd_clear_svcs_req_run },
+    { BHD_MSG_TYPE_ADD_SVCS,            bhd_add_svcs_req_run },
+    { BHD_MSG_TYPE_COMMIT_SVCS,         bhd_commit_svcs_req_run },
+    { BHD_MSG_TYPE_ACCESS_STATUS,       bhd_access_status_req_run },
 
     { -1 },
 };
@@ -98,6 +107,10 @@ static bhd_subrsp_enc_fn bhd_adv_stop_rsp_enc;
 static bhd_subrsp_enc_fn bhd_adv_set_data_rsp_enc;
 static bhd_subrsp_enc_fn bhd_adv_rsp_set_data_rsp_enc;
 static bhd_subrsp_enc_fn bhd_adv_fields_rsp_enc;
+static bhd_subrsp_enc_fn bhd_clear_svcs_rsp_enc;
+static bhd_subrsp_enc_fn bhd_add_svcs_rsp_enc;
+static bhd_subrsp_enc_fn bhd_commit_svcs_rsp_enc;
+static bhd_subrsp_enc_fn bhd_access_status_rsp_enc;
 
 static const struct bhd_rsp_dispatch_entry {
     int rsp_type;
@@ -128,6 +141,10 @@ static const struct bhd_rsp_dispatch_entry {
     { BHD_MSG_TYPE_ADV_SET_DATA,        bhd_adv_set_data_rsp_enc },
     { BHD_MSG_TYPE_ADV_RSP_SET_DATA,    bhd_adv_rsp_set_data_rsp_enc },
     { BHD_MSG_TYPE_ADV_FIELDS,          bhd_adv_fields_rsp_enc },
+    { BHD_MSG_TYPE_ADD_SVCS,            bhd_add_svcs_rsp_enc },
+    { BHD_MSG_TYPE_CLEAR_SVCS,          bhd_clear_svcs_rsp_enc },
+    { BHD_MSG_TYPE_COMMIT_SVCS,         bhd_commit_svcs_rsp_enc },
+    { BHD_MSG_TYPE_ACCESS_STATUS,       bhd_access_status_rsp_enc },
 
     { -1 },
 };
@@ -145,6 +162,7 @@ static bhd_evt_enc_fn bhd_scan_tmo_evt_enc;
 static bhd_evt_enc_fn bhd_scan_evt_enc;
 static bhd_evt_enc_fn bhd_enc_change_evt_enc;
 static bhd_evt_enc_fn bhd_reset_evt_enc;
+static bhd_evt_enc_fn bhd_access_evt_enc;
 
 static const struct bhd_evt_dispatch_entry {
     int msg_type;
@@ -162,6 +180,7 @@ static const struct bhd_evt_dispatch_entry {
     { BHD_MSG_TYPE_SCAN_TMO_EVT,        bhd_scan_tmo_evt_enc },
     { BHD_MSG_TYPE_ENC_CHANGE_EVT,      bhd_enc_change_evt_enc },
     { BHD_MSG_TYPE_RESET_EVT,           bhd_reset_evt_enc },
+    { BHD_MSG_TYPE_ACCESS_EVT,          bhd_access_evt_enc },
 
     { -1 },
 };
@@ -840,7 +859,10 @@ static int
 bhd_adv_start_req_run(cJSON *parent,
                       struct bhd_req *req, struct bhd_rsp *rsp)
 {
+    int addr_type;
     int rc;
+
+    req->adv_start = (struct bhd_adv_start_req){ 0 };
 
     req->adv_start.own_addr_type =
         bhd_json_addr_type(parent, "own_addr_type", &rc);
@@ -849,8 +871,7 @@ bhd_adv_start_req_run(cJSON *parent,
         return 1;
     }
 
-    req->adv_start.peer_addr.type =
-        bhd_json_addr_type(parent, "peer_addr_type", &rc);
+    addr_type = bhd_json_addr_type(parent, "peer_addr_type", &rc);
     switch (rc) {
     case SYS_ENOENT:
         break;
@@ -860,6 +881,7 @@ bhd_adv_start_req_run(cJSON *parent,
         return 1;
 
     case 0:
+        req->adv_start.peer_addr.type = addr_type;
         bhd_json_addr(parent, "peer_addr", req->adv_start.peer_addr.val, &rc);
         if (rc != 0) {
             bhd_err_build(rsp, rc, "invalid peer_addr");
@@ -917,7 +939,7 @@ bhd_adv_start_req_run(cJSON *parent,
     }
 
     req->adv_start.high_duty_cycle =
-        bhd_json_adv_filter_policy(parent, "high_duty_cycle", &rc);
+        bhd_json_bool(parent, "high_duty_cycle", &rc);
     if (rc != 0) {
         bhd_err_build(rsp, rc, "invalid high_duty_cycle");
         return 1;
@@ -993,14 +1015,23 @@ bhd_adv_fields_req_run(cJSON *parent,
                        struct bhd_req *req, struct bhd_rsp *rsp)
 {
     const char *s;
+    uint8_t u8;
     int slen;
     int num_elems;
     int num_bytes;
     int rc;
 
-    req->adv_fields.flags =
-        bhd_json_int_bounds(parent, "flags", 0, UINT8_MAX, &rc);
-    if (rc != 0 || req->adv_fields.flags == 0) {
+    req->adv_fields = (struct bhd_adv_fields_req){ 0 };
+
+    u8 = bhd_json_int_bounds(parent, "flags", 0, UINT8_MAX, &rc);
+    if (rc == 0) {
+        if (u8 == 0) {
+            bhd_err_build(rsp, SYS_EINVAL, "invalid flags");
+            return 1;
+        }
+
+        req->adv_fields.flags = u8;
+    } else if (rc != SYS_ENOENT) {
         bhd_err_build(rsp, rc, "invalid flags");
         return 1;
     }
@@ -1013,11 +1044,12 @@ bhd_adv_fields_req_run(cJSON *parent,
                              0xffff,
                              req->adv_fields.uuids16,
                              &num_elems);
-    if (rc != 0 && rc != SYS_ENOENT) {
+    if (rc == 0) {
+        req->adv_fields.num_uuids16 = num_elems;
+    } else if (rc != SYS_ENOENT) {
         bhd_err_build(rsp, rc, "invalid uuids16");
         return 1;
     }
-    req->adv_fields.num_uuids16 = num_elems;
 
     req->adv_fields.uuids16_is_complete =
         bhd_json_bool(parent, "uuids16_is_complete", &rc);
@@ -1034,11 +1066,12 @@ bhd_adv_fields_req_run(cJSON *parent,
                              0xffff,
                              req->adv_fields.uuids32,
                              &num_elems);
-    if (rc != 0 && rc != SYS_ENOENT) {
+    if (rc == 0) {
+        req->adv_fields.num_uuids32 = num_elems;
+    } else if (rc != SYS_ENOENT) {
         bhd_err_build(rsp, rc, "invalid uuids32");
         return 1;
     }
-    req->adv_fields.num_uuids32 = num_elems;
 
     req->adv_fields.uuids32_is_complete =
         bhd_json_bool(parent, "uuids32_is_complete", &rc);
@@ -1054,11 +1087,12 @@ bhd_adv_fields_req_run(cJSON *parent,
                                    sizeof req->adv_fields.uuids128[0],
                              (uint8_t *)req->adv_fields.uuids128,
                              &num_elems);
-    if (rc != 0 && rc != SYS_ENOENT) {
+    if (rc == 0) {
+        req->adv_fields.num_uuids128 = num_elems;
+    } else if (rc != SYS_ENOENT) {
         bhd_err_build(rsp, rc, "invalid uuids128");
         return 1;
     }
-    req->adv_fields.num_uuids128 = num_elems;
 
     req->adv_fields.uuids128_is_complete =
         bhd_json_bool(parent, "uuids128_is_complete", &rc);
@@ -1068,17 +1102,18 @@ bhd_adv_fields_req_run(cJSON *parent,
     }
 
     s = bhd_json_string(parent, "name", &rc);
-    if (rc != 0 && rc != SYS_ENOENT) {
+    if (rc == 0) {
+        slen = strlen(s);
+        if (slen > sizeof req->adv_fields.name) {
+            bhd_err_build(rsp, SYS_ERANGE, "invalid name");
+            return 1;
+        }
+        memcpy(req->adv_fields.name, s, slen);
+        req->adv_fields.name_len = slen;
+    } else if (rc != SYS_ENOENT) {
         bhd_err_build(rsp, rc, "invalid name");
         return 1;
     }
-    slen = strlen(s);
-    if (slen > sizeof req->adv_fields.name) {
-        bhd_err_build(rsp, SYS_ERANGE, "invalid name");
-        return 1;
-    }
-    memcpy(req->adv_fields.name, s, slen);
-    req->adv_fields.name_len = slen;
 
     req->adv_fields.name_is_complete =
         bhd_json_bool(parent, "name_is_complete", &rc);
@@ -1124,11 +1159,12 @@ bhd_adv_fields_req_run(cJSON *parent,
                         req->adv_fields.svc_data_uuid16,
                         &num_bytes,
                         &rc);
-    if (rc != 0) {
+    if (rc == 0) {
+        req->adv_fields.svc_data_uuid16_len = num_bytes;
+    } else if (rc != SYS_ENOENT) {
         bhd_err_build(rsp, rc, "invalid svc_data_uuid16");
         return 1;
     }
-    req->adv_fields.svc_data_uuid16_len = num_bytes;
 
     rc = ble_json_arr_addr(parent,
                            "public_tgt_addrs", 
@@ -1136,11 +1172,12 @@ bhd_adv_fields_req_run(cJSON *parent,
                              sizeof req->adv_fields.public_tgt_addrs[0],
                            (uint8_t *)req->adv_fields.public_tgt_addrs,
                            &num_elems);
-    if (rc != 0) {
+    if (rc == 0) {
+        req->adv_fields.num_public_tgt_addrs = num_elems;
+    } else if (rc != SYS_ENOENT) {
         bhd_err_build(rsp, rc, "invalid public_target_addrs");
         return 1;
     }
-    req->adv_fields.num_public_tgt_addrs = num_elems;
 
     req->adv_fields.appearance =
         bhd_json_int_bounds(parent, "appearance", 0, UINT16_MAX, &rc);
@@ -1166,11 +1203,12 @@ bhd_adv_fields_req_run(cJSON *parent,
                         req->adv_fields.svc_data_uuid32,
                         &num_bytes,
                         &rc);
-    if (rc != 0) {
+    if (rc == 0) {
+        req->adv_fields.svc_data_uuid32_len = num_bytes;
+    } else if (rc != SYS_ENOENT) {
         bhd_err_build(rsp, rc, "invalid svc_data_uuid32");
         return 1;
     }
-    req->adv_fields.svc_data_uuid32_len = num_bytes;
 
     bhd_json_hex_string(parent,
                         "svc_data_uuid128",
@@ -1178,25 +1216,27 @@ bhd_adv_fields_req_run(cJSON *parent,
                         req->adv_fields.svc_data_uuid128,
                         &num_bytes,
                         &rc);
-    if (rc != 0) {
+    if (rc == 0) {
+        req->adv_fields.svc_data_uuid128_len = num_bytes;
+    } else if (rc != SYS_ENOENT) {
         bhd_err_build(rsp, rc, "invalid svc_data_uuid128");
         return 1;
     }
-    req->adv_fields.svc_data_uuid128_len = num_bytes;
 
     s = bhd_json_string(parent, "uri", &rc);
-    if (rc != 0 && rc != SYS_ENOENT) {
+    if (rc == 0) {
+        slen = strlen(s);
+        if (slen > sizeof req->adv_fields.uri) {
+            rc = SYS_ERANGE;
+            bhd_err_build(rsp, rc, "invalid uri");
+            return 1;
+        }
+        memcpy(req->adv_fields.uri, s, slen);
+        req->adv_fields.uri_len = slen;
+    } else if (rc != SYS_ENOENT) {
         bhd_err_build(rsp, rc, "invalid uri");
         return 1;
     }
-    slen = strlen(s);
-    if (slen > sizeof req->adv_fields.uri) {
-        rc = SYS_ERANGE;
-        bhd_err_build(rsp, rc, "invalid uri");
-        return 1;
-    }
-    memcpy(req->adv_fields.uri, s, slen);
-    req->adv_fields.uri_len = slen;
 
     bhd_json_hex_string(parent,
                         "mfg_data",
@@ -1204,12 +1244,106 @@ bhd_adv_fields_req_run(cJSON *parent,
                         req->adv_fields.mfg_data,
                         &num_bytes,
                         &rc);
-    if (rc != 0) {
+    if (rc == 0) {
+        req->adv_fields.mfg_data_len = num_bytes;
+    } else if (rc != SYS_ENOENT) {
         bhd_err_build(rsp, rc, "invalid mfg_data");
         return 1;
     }
-    req->adv_fields.mfg_data_len = num_bytes;
 
+    bhd_gap_adv_fields(req, rsp);
+
+    return 1;
+}
+
+/**
+ * @return                      1 if a response should be sent;
+ *                              0 for no response.
+ */
+static int
+bhd_clear_svcs_req_run(cJSON *parent,
+                       struct bhd_req *req, struct bhd_rsp *rsp)
+{
+    bhd_gatts_clear_svcs(req, rsp);
+    return 1;
+}
+
+/**
+ * @return                      1 if a response should be sent;
+ *                              0 for no response.
+ */
+static int
+bhd_add_svcs_req_run(cJSON *parent,
+                     struct bhd_req *req, struct bhd_rsp *rsp)
+{
+    cJSON *item;
+    cJSON *arr;
+    char *err_msg;
+    int rc;
+    int i;
+
+    arr = bhd_json_arr(parent, "services", &rc);
+    if (rc != 0) {
+        rsp->add_svcs.status = rc;
+        goto done;
+    }
+
+    req->add_svcs.num_svcs = bhd_arr_len(arr);
+    req->add_svcs.svcs = malloc_success(
+        req->add_svcs.num_svcs * sizeof *req->add_svcs.svcs);
+
+    i = 0;
+    cJSON_ArrayForEach(item, arr) {
+        rc = bhd_json_svc(item, req->add_svcs.svcs + i, &err_msg);
+        if (rc != 0) {
+            rsp->add_svcs.status = rc;
+            goto done;
+        }
+        i++;
+    }
+
+    bhd_gatts_add_svcs(req, rsp);
+
+done:
+    for (i = 0; i < req->add_svcs.num_svcs; i++) {
+        bhd_destroy_svc(req->add_svcs.svcs + i);
+    }
+    free(req->add_svcs.svcs);
+
+    return 1;
+}
+
+/**
+ * @return                      1 if a response should be sent;
+ *                              0 for no response.
+ */
+static int
+bhd_commit_svcs_req_run(cJSON *parent,
+                   struct bhd_req *req, struct bhd_rsp *rsp)
+{
+    bhd_gatts_commit_svcs(req, rsp);
+    return 1;
+}
+
+;
+/**
+ * @return                      1 if a response should be sent;
+ *                              0 for no response.
+ */
+static int
+bhd_access_status_req_run(cJSON *parent,
+                          struct bhd_req *req, struct bhd_rsp *rsp)
+{
+    int rc;
+
+    req->access_status.att_status =
+        bhd_json_int_bounds(parent, "att_status", 0, UINT8_MAX, &rc);
+    if (rc != 0) {
+        rsp->access_status.status = rc;
+        return 1;
+    }
+
+    bhd_gatts_access_status(req, rsp);
     return 1;
 }
 
@@ -1508,6 +1642,72 @@ static int
 bhd_adv_fields_rsp_enc(cJSON *parent, const struct bhd_rsp *rsp)
 {
     bhd_json_add_int(parent, "status", rsp->adv_fields.status);
+
+    if (rsp->adv_fields.status == 0) {
+        bhd_json_add_bytes(parent, "data", rsp->adv_fields.data,
+                           rsp->adv_fields.data_len);
+    }
+
+    return 0;
+}
+
+static int
+bhd_clear_svcs_rsp_enc(cJSON *parent, const struct bhd_rsp *rsp)
+{
+    bhd_json_add_int(parent, "status", rsp->clear_svcs.status);
+    return 0;
+}
+
+static int
+bhd_add_svcs_rsp_enc(cJSON *parent, const struct bhd_rsp *rsp)
+{
+    bhd_json_add_int(parent, "status", rsp->add_svcs.status);
+    return 0;
+}
+
+static int
+bhd_commit_svcs_rsp_enc(cJSON *parent, const struct bhd_rsp *rsp)
+{
+    cJSON *svcs;
+    cJSON *svc;
+    int rc;
+    int i;
+
+    bhd_json_add_int(parent, "status", rsp->commit_svcs.status);
+
+    svcs = cJSON_CreateArray();
+    if (svcs == NULL) {
+        rc = SYS_ENOMEM;
+        goto done;
+    }
+
+    for (i = 0; i < rsp->commit_svcs.num_svcs; i++) {
+        svc = bhd_json_create_commit_svc(rsp->commit_svcs.svcs + i);
+        if (svc == NULL) {
+            rc = SYS_ENOMEM;
+            goto done;
+        }
+
+        cJSON_AddItemToArray(svcs, svc);
+    }
+
+    cJSON_AddItemToObject(parent, "services", svcs);
+
+    rc = 0;
+
+done:
+    for (i = 0; i < rsp->commit_svcs.num_svcs; i++) {
+        free(rsp->commit_svcs.svcs[i].chrs);
+    }
+    free(rsp->commit_svcs.svcs);
+
+    return rc;
+}
+
+static int
+bhd_access_status_rsp_enc(cJSON *parent, const struct bhd_rsp *rsp)
+{
+    bhd_json_add_int(parent, "status", rsp->add_svcs.status);
     return 0;
 }
 
@@ -1812,6 +2012,16 @@ static int
 bhd_reset_evt_enc(cJSON *parent, const struct bhd_evt *evt)
 {
     bhd_json_add_int(parent, "reason", evt->reset.reason);
+    return 0;
+}
+
+static int
+bhd_access_evt_enc(cJSON *parent, const struct bhd_evt *evt)
+{
+    bhd_json_add_gatt_access_op(parent, "access_op", evt->access.access_op);
+    bhd_json_add_int(parent, "conn_handle", evt->access.conn_handle);
+    bhd_json_add_int(parent, "att_handle", evt->access.att_handle);
+    bhd_json_add_bytes(parent, "data", evt->access.data, evt->access.data_len);
     return 0;
 }
 
