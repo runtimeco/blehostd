@@ -289,19 +289,21 @@ static char *print_number(const cJSON *item, printbuffer *p)
             strcpy(str,"0");
         }
     }
-
-    if (p)
-    {
-        str = ensure(p, 21);
-    }
     else
     {
-        /* 2^64+1 can be represented in 21 chars. */
-        str = (char*)cJSON_malloc(21);
-    }
-    if (str)
-    {
-        sprintf(str, "%lld", (long long)item->valueint);
+        if (p)
+        {
+            str = ensure(p, 21);
+        }
+        else
+        {
+            /* 2^64+1 can be represented in 21 chars. */
+            str = (char*)cJSON_malloc(21);
+        }
+        if (str)
+        {
+            sprintf(str, "%lld", (long long)item->valueint);
+        }
     }
 
     return str;
