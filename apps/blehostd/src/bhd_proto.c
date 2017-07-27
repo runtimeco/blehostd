@@ -1365,7 +1365,8 @@ bhd_req_dec(const char *json, struct bhd_rsp *out_rsp)
     root = cJSON_Parse(json);
     if (root == NULL) {
         bhd_err_build(out_rsp, SYS_ERANGE, "invalid json");
-        return 1;
+        rc = 1;
+        goto done;
     }
 
     err = bhd_msg_hdr_dec(root, &req.hdr);
@@ -1373,24 +1374,30 @@ bhd_req_dec(const char *json, struct bhd_rsp *out_rsp)
         BHD_LOG(DEBUG, "failed to decode BHD header; json=%s\n", json);
         out_rsp->hdr.type = BHD_MSG_TYPE_ERR;
         out_rsp->err = err;
-        return 1;
+        rc = 1;
+        goto done;
     }
     out_rsp->hdr.seq = req.hdr.seq;
 
     if (req.hdr.op != BHD_MSG_OP_REQ) {
         bhd_err_build(out_rsp, SYS_ERANGE, "invalid op");
-        return 1;
+        rc = 1;
+        goto done;
     }
 
     req_cb = bhd_req_dispatch_find(req.hdr.type);
     if (req_cb == NULL) {
         bhd_err_build(out_rsp, SYS_ERANGE, "invalid type");
-        return 1;
+        rc = 1;
+        goto done;
     }
 
     out_rsp->hdr.type = req.hdr.type;
 
     rc = req_cb(root, &req, out_rsp);
+
+done:
+    cJSON_Delete(root);
     return rc;
 }
 
