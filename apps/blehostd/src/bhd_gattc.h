@@ -16,5 +16,6 @@ void bhd_gattc_exchange_mtu(const struct bhd_req *req,
                             struct bhd_rsp *out_rsp);
 void bhd_gattc_set_preferred_mtu(const struct bhd_req *req,
                                  struct bhd_rsp *out_rsp);
+void bhd_gattc_notify(const struct bhd_req *req, struct bhd_rsp *out_rsp);
 
 #endif

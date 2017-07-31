@@ -29,6 +29,8 @@ static int bhd_gatts_num_val_handles;
 
 static struct os_sem bhd_gatts_access_sem;
 static uint8_t bhd_gatts_access_att_status = BHD_GATTS_ACCESS_STATUS_NONE;
+static uint8_t bhd_gatts_access_value[BLE_ATT_ATTR_MAX_LEN];
+static int bhd_gatts_access_value_len;
 
 static void
 bhd_gatts_cnt_resources(const struct bhd_add_svcs_req *req,
@@ -108,7 +110,8 @@ bhd_gatts_verify_resource_cnt(const struct bhd_add_svcs_req *req)
 }
 
 int
-bhd_gatts_set_access_status(uint8_t att_status)
+bhd_gatts_set_access_result(uint8_t att_status,
+                            const uint8_t *data, int data_len)
 {
     os_sr_t sr;
     int rc;
@@ -117,6 +120,15 @@ bhd_gatts_set_access_status(uint8_t att_status)
 
     if (bhd_gatts_access_att_status == BHD_GATTS_ACCESS_STATUS_NONE) {
         bhd_gatts_access_att_status = att_status;
+        if (data != NULL) {
+            if (data_len > sizeof bhd_gatts_access_value) {
+                data_len = sizeof bhd_gatts_access_value;
+            }
+
+            memcpy(bhd_gatts_access_value, data, data_len);
+            bhd_gatts_access_value_len = data_len;
+        }
+
         rc = 0;
     } else {
         rc = SYS_ENOENT;
@@ -132,7 +144,8 @@ bhd_gatts_set_access_status(uint8_t att_status)
 }
 
 static uint8_t
-bhd_gatts_wait_for_access_status(void)
+bhd_gatts_wait_for_access_status(const uint8_t **out_attr_val,
+                                 int *out_attr_len)
 {
     uint8_t status;
     int rc;
@@ -145,6 +158,9 @@ bhd_gatts_wait_for_access_status(void)
     }
 
     bhd_gatts_access_att_status = BHD_GATTS_ACCESS_STATUS_NONE;
+    *out_attr_val = bhd_gatts_access_value;
+    *out_attr_len = bhd_gatts_access_value_len;
+
     return status;
 }
 
@@ -155,6 +171,8 @@ bhd_gatts_access(uint16_t conn_handle, uint16_t attr_handle,
     uint8_t buf[BLE_ATT_ATTR_MAX_LEN + 3];
     uint16_t data_len;
     struct bhd_access_evt access_evt;
+    const uint8_t *attr_val;
+    int attr_len;
     bhd_seq_t seq;
     int rc;
 
@@ -182,7 +200,21 @@ bhd_gatts_access(uint16_t conn_handle, uint16_t attr_handle,
     }
 
     /* Wait for client to indicate status via an access-status request. */
-    return bhd_gatts_wait_for_access_status();
+    rc = bhd_gatts_wait_for_access_status(&attr_val, &attr_len);
+    if (rc != 0) {
+        return rc;
+    }
+
+    if (ctxt->op == BLE_GATT_ACCESS_OP_READ_CHR ||
+        ctxt->op == BLE_GATT_ACCESS_OP_READ_DSC) {
+
+        rc = os_mbuf_append(ctxt->om, attr_val, attr_len);
+        if (rc != 0) {
+            return BLE_ATT_ERR_INSUFFICIENT_RES;
+        }
+    }
+
+    return 0;
 }
 
 static ble_uuid_any_t *
@@ -400,7 +432,19 @@ void
 bhd_gatts_access_status(const struct bhd_req *req, struct bhd_rsp *out_rsp)
 {
     out_rsp->access_status.status =
-        bhd_gatts_set_access_status(req->access_status.att_status);
+        bhd_gatts_set_access_result(req->access_status.att_status,
+                                    req->access_status.data,
+                                    req->access_status.data_len);
+}
+
+void
+bhd_gatts_find_chr(const struct bhd_req *req, struct bhd_rsp *rsp)
+{
+    rsp->find_chr.status =
+        ble_gatts_find_chr(&req->find_chr.svc_uuid.u,
+                           &req->find_chr.chr_uuid.u,
+                           &rsp->find_chr.def_handle,
+                           &rsp->find_chr.val_handle);
 }
 
 void

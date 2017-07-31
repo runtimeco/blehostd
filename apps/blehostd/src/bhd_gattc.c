@@ -237,3 +237,21 @@ bhd_gattc_set_preferred_mtu(const struct bhd_req *req, struct bhd_rsp *out_rsp)
     rc = ble_att_set_preferred_mtu(req->set_preferred_mtu.mtu);
     out_rsp->set_preferred_mtu.status = rc;
 }
+
+void
+bhd_gattc_notify(const struct bhd_req *req, struct bhd_rsp *out_rsp)
+{
+    struct os_mbuf *om;
+    int rc;
+
+    om = ble_hs_mbuf_from_flat(req->notify.data, req->notify.data_len);
+    if (om == NULL) {
+        bhd_err_build(out_rsp, SYS_ENOMEM, "no mbufs available");
+        return;
+    }
+
+    rc = ble_gattc_notify_custom(req->notify.conn_handle,
+                                 req->notify.attr_handle,
+                                 om);
+    out_rsp->notify.status = rc;
+}

@@ -48,6 +48,8 @@ static const struct bhd_kv_str_int bhd_type_map[] = {
     { "add_svcs",           BHD_MSG_TYPE_ADD_SVCS },
     { "commit_svcs",        BHD_MSG_TYPE_COMMIT_SVCS },
     { "access_status",      BHD_MSG_TYPE_ACCESS_STATUS },
+    { "notify",             BHD_MSG_TYPE_NOTIFY },
+    { "find_chr",           BHD_MSG_TYPE_FIND_CHR },
 
     { "sync_evt",           BHD_MSG_TYPE_SYNC_EVT },
     { "connect_evt",        BHD_MSG_TYPE_CONNECT_EVT },

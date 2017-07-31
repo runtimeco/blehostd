@@ -38,6 +38,8 @@
 #define BHD_MSG_TYPE_ADD_SVCS               27
 #define BHD_MSG_TYPE_COMMIT_SVCS            28
 #define BHD_MSG_TYPE_ACCESS_STATUS          29
+#define BHD_MSG_TYPE_NOTIFY                 30
+#define BHD_MSG_TYPE_FIND_CHR               31
 
 #define BHD_MSG_TYPE_SYNC_EVT               2049
 #define BHD_MSG_TYPE_CONNECT_EVT            2050
@@ -274,6 +276,20 @@ struct bhd_add_svcs_req {
 
 struct bhd_access_status_req {
     uint8_t att_status;
+    uint8_t *data;
+    int data_len;
+};
+
+struct bhd_notify_req {
+    uint16_t conn_handle;
+    uint16_t attr_handle;
+    uint8_t *data;
+    int data_len;
+};
+
+struct bhd_find_chr_req {
+    ble_uuid_any_t svc_uuid;
+    ble_uuid_any_t chr_uuid;
 };
 
 struct bhd_req {
@@ -299,6 +315,8 @@ struct bhd_req {
         struct bhd_adv_fields_req adv_fields;
         struct bhd_add_svcs_req add_svcs;
         struct bhd_access_status_req access_status;
+        struct bhd_notify_req notify;
+        struct bhd_find_chr_req find_chr;
     };
 };
 
@@ -456,6 +474,16 @@ struct bhd_access_status_rsp {
     int status;
 };
 
+struct bhd_notify_rsp {
+    int status;
+};
+
+struct bhd_find_chr_rsp {
+    int status;
+    uint16_t def_handle;
+    uint16_t val_handle;
+};
+
 struct bhd_rsp {
     struct bhd_msg_hdr hdr;
     union {
@@ -486,6 +514,8 @@ struct bhd_rsp {
         struct bhd_add_svcs_rsp add_svcs;
         struct bhd_commit_svcs_rsp commit_svcs;
         struct bhd_access_status_rsp access_status;
+        struct bhd_notify_rsp notify;
+        struct bhd_find_chr_rsp find_chr;
     };
 };
 
