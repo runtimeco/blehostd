@@ -78,6 +78,38 @@ bhd_gattc_disc_chr_cb(uint16_t conn_handle,
 }
 
 static int
+bhd_gattc_disc_dsc_cb(uint16_t conn_handle,
+                      const struct ble_gatt_error *error,
+                      uint16_t chr_def_handle,
+                      const struct ble_gatt_dsc *dsc,
+                      void *arg)
+{
+    struct bhd_gattc_disc_dsc_arg *dsc_arg;
+    struct bhd_evt evt;
+
+    dsc_arg = arg;
+
+    memset(&evt, 0, sizeof(evt));
+    evt.hdr.op = BHD_MSG_OP_EVT;
+    evt.hdr.type = BHD_MSG_TYPE_DISC_DSC_EVT;
+    evt.hdr.seq = dsc_arg->seq;
+
+    evt.disc_dsc.conn_handle = conn_handle;
+    evt.disc_dsc.status = error->status;
+    evt.disc_dsc.chr_def_handle = chr_def_handle;
+
+    if (error->status == 0) {
+        evt.disc_dsc.dsc = *dsc;
+    } else {
+        free(dsc_arg);
+    }
+
+    bhd_evt_send(&evt);
+
+    return 0;
+}
+
+static int
 bhd_gattc_write_cb(uint16_t conn_handle,
                    const struct ble_gatt_error *error,
                    struct ble_gatt_attr *attr,
@@ -181,6 +213,28 @@ bhd_gattc_disc_chr_uuid(const struct bhd_req *req, struct bhd_rsp *out_rsp)
         free(chr_arg);
     }
     out_rsp->disc_chr_uuid.status = rc;
+}
+
+void
+bhd_gattc_disc_all_dscs(const struct bhd_req *req, struct bhd_rsp *out_rsp)
+{
+    struct bhd_gattc_disc_dsc_arg *dsc_arg;
+    int rc;
+
+    dsc_arg = malloc_success(sizeof *dsc_arg);
+
+    dsc_arg->seq = req->hdr.seq;
+    dsc_arg->chr_val_handle = req->disc_all_dscs.start_attr_handle;
+
+    rc = ble_gattc_disc_all_dscs(req->disc_all_dscs.conn_handle,
+                                 req->disc_all_dscs.start_attr_handle,
+                                 req->disc_all_dscs.end_attr_handle,
+                                 bhd_gattc_disc_dsc_cb, dsc_arg);
+    if (rc != 0) {
+        free(dsc_arg);
+    }
+
+    out_rsp->disc_all_dscs.status = rc;
 }
 
 void

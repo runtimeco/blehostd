@@ -24,6 +24,7 @@ static bhd_req_run_fn bhd_disc_all_svcs_req_run;
 static bhd_req_run_fn bhd_disc_svc_uuid_req_run;
 static bhd_req_run_fn bhd_disc_all_chrs_req_run;
 static bhd_req_run_fn bhd_disc_chr_uuid_req_run;
+static bhd_req_run_fn bhd_disc_all_dscs_req_run;
 static bhd_req_run_fn bhd_write_req_run;
 static bhd_req_run_fn bhd_write_cmd_req_run;
 static bhd_req_run_fn bhd_exchange_mtu_req_run;
@@ -59,6 +60,7 @@ static const struct bhd_req_dispatch_entry {
     { BHD_MSG_TYPE_DISC_SVC_UUID,       bhd_disc_svc_uuid_req_run },
     { BHD_MSG_TYPE_DISC_ALL_CHRS,       bhd_disc_all_chrs_req_run },
     { BHD_MSG_TYPE_DISC_CHR_UUID,       bhd_disc_chr_uuid_req_run },
+    { BHD_MSG_TYPE_DISC_ALL_DSCS,       bhd_disc_all_dscs_req_run },
     { BHD_MSG_TYPE_WRITE,               bhd_write_req_run },
     { BHD_MSG_TYPE_WRITE_CMD,           bhd_write_cmd_req_run },
     { BHD_MSG_TYPE_EXCHANGE_MTU,        bhd_exchange_mtu_req_run },
@@ -95,6 +97,7 @@ static bhd_subrsp_enc_fn bhd_disc_all_svcs_rsp_enc;
 static bhd_subrsp_enc_fn bhd_disc_svc_uuid_rsp_enc;
 static bhd_subrsp_enc_fn bhd_disc_all_chrs_rsp_enc;
 static bhd_subrsp_enc_fn bhd_disc_chr_uuid_rsp_enc;
+static bhd_subrsp_enc_fn bhd_disc_all_dscs_rsp_enc;
 static bhd_subrsp_enc_fn bhd_write_rsp_enc;
 static bhd_subrsp_enc_fn bhd_exchange_mtu_rsp_enc;
 static bhd_subrsp_enc_fn bhd_gen_rand_addr_rsp_enc;
@@ -130,6 +133,7 @@ static const struct bhd_rsp_dispatch_entry {
     { BHD_MSG_TYPE_DISC_SVC_UUID,       bhd_disc_svc_uuid_rsp_enc },
     { BHD_MSG_TYPE_DISC_ALL_CHRS,       bhd_disc_all_chrs_rsp_enc },
     { BHD_MSG_TYPE_DISC_CHR_UUID,       bhd_disc_chr_uuid_rsp_enc },
+    { BHD_MSG_TYPE_DISC_ALL_DSCS,       bhd_disc_all_dscs_rsp_enc },
     { BHD_MSG_TYPE_WRITE,               bhd_write_rsp_enc },
     { BHD_MSG_TYPE_WRITE_CMD,           bhd_write_rsp_enc },
     { BHD_MSG_TYPE_EXCHANGE_MTU,        bhd_exchange_mtu_rsp_enc },
@@ -163,6 +167,7 @@ static bhd_evt_enc_fn bhd_connect_evt_enc;
 static bhd_evt_enc_fn bhd_disconnect_evt_enc;
 static bhd_evt_enc_fn bhd_disc_svc_evt_enc;
 static bhd_evt_enc_fn bhd_disc_chr_evt_enc;
+static bhd_evt_enc_fn bhd_disc_dsc_evt_enc;
 static bhd_evt_enc_fn bhd_write_ack_evt_enc;
 static bhd_evt_enc_fn bhd_notify_rx_evt_enc;
 static bhd_evt_enc_fn bhd_mtu_change_evt_enc;
@@ -181,6 +186,7 @@ static const struct bhd_evt_dispatch_entry {
     { BHD_MSG_TYPE_DISCONNECT_EVT,      bhd_disconnect_evt_enc },
     { BHD_MSG_TYPE_DISC_SVC_EVT,        bhd_disc_svc_evt_enc },
     { BHD_MSG_TYPE_DISC_CHR_EVT,        bhd_disc_chr_evt_enc },
+    { BHD_MSG_TYPE_DISC_DSC_EVT,        bhd_disc_dsc_evt_enc },
     { BHD_MSG_TYPE_WRITE_ACK_EVT,       bhd_write_ack_evt_enc },
     { BHD_MSG_TYPE_NOTIFY_RX_EVT,       bhd_notify_rx_evt_enc },
     { BHD_MSG_TYPE_MTU_CHANGE_EVT,      bhd_mtu_change_evt_enc },
@@ -560,6 +566,41 @@ bhd_disc_chr_uuid_req_run(cJSON *parent,
     }
 
     bhd_gattc_disc_chr_uuid(req, rsp);
+    return 1;
+}
+
+/**
+ * @return                      1 if a response should be sent;
+ *                              0 for no response.
+ */
+static int
+bhd_disc_all_dscs_req_run(cJSON *parent,
+                          struct bhd_req *req, struct bhd_rsp *rsp)
+{
+    int rc;
+
+    req->disc_all_dscs.conn_handle =
+        bhd_json_int_bounds(parent, "conn_handle", 0, 0xffff, &rc);
+    if (rc != 0) {
+        bhd_err_fill(&rsp->err, rc, "invalid conn_handle");
+        return 1;
+    }
+
+    req->disc_all_dscs.start_attr_handle =
+        bhd_json_int_bounds(parent, "start_handle", 0, 0xffff, &rc);
+    if (rc != 0) {
+        bhd_err_fill(&rsp->err, rc, "invalid start_attr_handle");
+        return 1;
+    }
+
+    req->disc_all_dscs.end_attr_handle =
+        bhd_json_int_bounds(parent, "end_handle", 0, 0xffff, &rc);
+    if (rc != 0) {
+        bhd_err_fill(&rsp->err, rc, "invalid end_attr_handle");
+        return 1;
+    }
+
+    bhd_gattc_disc_all_dscs(req, rsp);
     return 1;
 }
 
@@ -1287,6 +1328,7 @@ bhd_add_svcs_req_run(cJSON *parent,
     cJSON *item;
     cJSON *arr;
     char *err_msg;
+    int num_svcs;
     int rc;
     int i;
 
@@ -1296,9 +1338,9 @@ bhd_add_svcs_req_run(cJSON *parent,
         goto done;
     }
 
-    req->add_svcs.num_svcs = bhd_arr_len(arr);
+    num_svcs = bhd_arr_len(arr);
     req->add_svcs.svcs = malloc_success(
-        req->add_svcs.num_svcs * sizeof *req->add_svcs.svcs);
+        num_svcs * sizeof *req->add_svcs.svcs);
 
     i = 0;
     cJSON_ArrayForEach(item, arr) {
@@ -1308,6 +1350,7 @@ bhd_add_svcs_req_run(cJSON *parent,
             goto done;
         }
         i++;
+        req->add_svcs.num_svcs++;
     }
 
     bhd_gatts_add_svcs(req, rsp);
@@ -1438,6 +1481,8 @@ bhd_req_dec(const char *json, struct bhd_rsp *out_rsp)
     cJSON *root;
     int rc;
 
+    req = (struct bhd_req){ 0 };
+
     out_rsp->hdr.op = BHD_MSG_OP_RSP;
 
     root = cJSON_Parse(json);
@@ -1567,6 +1612,13 @@ static int
 bhd_disc_chr_uuid_rsp_enc(cJSON *parent, const struct bhd_rsp *rsp)
 {
     bhd_json_add_int(parent, "status", rsp->disc_all_chrs.status);
+    return 0;
+}
+
+static int
+bhd_disc_all_dscs_rsp_enc(cJSON *parent, const struct bhd_rsp *rsp)
+{
+    bhd_json_add_int(parent, "status", rsp->disc_all_dscs.status);
     return 0;
 }
 
@@ -1933,6 +1985,33 @@ bhd_disc_chr_evt_enc(cJSON *parent, const struct bhd_evt *evt)
 
         cJSON_AddStringToObject(chr, "uuid",
                                 ble_uuid_to_str(&evt->disc_chr.chr.uuid.u,
+                                                uuid_str));
+    }
+
+    return 0;
+}
+
+static int
+bhd_disc_dsc_evt_enc(cJSON *parent, const struct bhd_evt *evt)
+{
+    char uuid_str[BLE_UUID_STR_LEN];
+    cJSON *dsc;
+
+    bhd_json_add_int(parent, "conn_handle", evt->disc_dsc.conn_handle);
+    bhd_json_add_int(parent, "status", evt->disc_dsc.status);
+    bhd_json_add_int(parent, "chr_def_handle", evt->disc_dsc.chr_def_handle);
+
+    if (evt->disc_dsc.status == 0) {
+        dsc = cJSON_CreateObject();
+        if (dsc == NULL) {
+            return SYS_ENOMEM;
+        }
+
+        cJSON_AddItemToObject(parent, "descriptor", dsc);
+
+        bhd_json_add_int(dsc, "handle", evt->disc_dsc.dsc.handle);
+        cJSON_AddStringToObject(dsc, "uuid",
+                                ble_uuid_to_str(&evt->disc_dsc.dsc.uuid.u,
                                                 uuid_str));
     }
 

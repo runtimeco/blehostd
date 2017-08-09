@@ -27,6 +27,7 @@ static const struct bhd_kv_str_int bhd_type_map[] = {
     { "disc_svc_uuid",      BHD_MSG_TYPE_DISC_SVC_UUID },
     { "disc_all_chrs",      BHD_MSG_TYPE_DISC_ALL_CHRS },
     { "disc_chr_uuid",      BHD_MSG_TYPE_DISC_CHR_UUID },
+    { "disc_all_dscs",      BHD_MSG_TYPE_DISC_ALL_DSCS },
     { "write",              BHD_MSG_TYPE_WRITE },
     { "write_cmd",          BHD_MSG_TYPE_WRITE_CMD },
     { "exchange_mtu",       BHD_MSG_TYPE_EXCHANGE_MTU },
@@ -56,6 +57,7 @@ static const struct bhd_kv_str_int bhd_type_map[] = {
     { "disconnect_evt",     BHD_MSG_TYPE_DISCONNECT_EVT },
     { "disc_svc_evt",       BHD_MSG_TYPE_DISC_SVC_EVT },
     { "disc_chr_evt",       BHD_MSG_TYPE_DISC_CHR_EVT },
+    { "disc_dsc_evt",       BHD_MSG_TYPE_DISC_DSC_EVT },
     { "write_ack_evt",      BHD_MSG_TYPE_WRITE_ACK_EVT },
     { "notify_rx_evt",      BHD_MSG_TYPE_NOTIFY_RX_EVT },
     { "mtu_change_evt",     BHD_MSG_TYPE_MTU_CHANGE_EVT },
@@ -883,6 +885,8 @@ bhd_json_dsc(cJSON *parent, struct bhd_dsc *out_dsc, char **out_err)
 {
     int rc;
 
+    *out_dsc = (struct bhd_dsc){ 0 };
+
     bhd_json_uuid(parent, "uuid", &out_dsc->uuid, &rc);
     if (rc != 0) {
         *out_err = "invalid descriptor UUID";
@@ -912,6 +916,8 @@ bhd_json_chr(cJSON *parent, struct bhd_chr *out_chr, char **out_err)
     cJSON *item;
     cJSON *arr;
     int rc;
+
+    *out_chr = (struct bhd_chr){ 0 };
 
     bhd_json_uuid(parent, "uuid", &out_chr->uuid, &rc);
     if (rc != 0) {
@@ -966,6 +972,8 @@ bhd_json_svc(cJSON *parent, struct bhd_svc *out_svc, char **out_err)
     cJSON *arr;
     int rc;
     int ci;
+
+    *out_svc = (struct bhd_svc){ 0 };
 
     out_svc->type = bhd_json_svc_type(parent, "type", &rc);
     if (rc != 0) {

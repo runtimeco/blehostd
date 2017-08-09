@@ -17,43 +17,45 @@
 #define BHD_MSG_TYPE_DISC_SVC_UUID          6
 #define BHD_MSG_TYPE_DISC_ALL_CHRS          7
 #define BHD_MSG_TYPE_DISC_CHR_UUID          8
-#define BHD_MSG_TYPE_WRITE                  9
-#define BHD_MSG_TYPE_WRITE_CMD              10
-#define BHD_MSG_TYPE_EXCHANGE_MTU           11
-#define BHD_MSG_TYPE_GEN_RAND_ADDR          12
-#define BHD_MSG_TYPE_SET_RAND_ADDR          13
-#define BHD_MSG_TYPE_CONN_CANCEL            14
-#define BHD_MSG_TYPE_SCAN                   15
-#define BHD_MSG_TYPE_SCAN_CANCEL            16
-#define BHD_MSG_TYPE_SET_PREFERRED_MTU      17
-#define BHD_MSG_TYPE_ENC_INITIATE           18
-#define BHD_MSG_TYPE_CONN_FIND              19
-#define BHD_MSG_TYPE_RESET                  20
-#define BHD_MSG_TYPE_ADV_START              21
-#define BHD_MSG_TYPE_ADV_STOP               22
-#define BHD_MSG_TYPE_ADV_SET_DATA           23
-#define BHD_MSG_TYPE_ADV_RSP_SET_DATA       24
-#define BHD_MSG_TYPE_ADV_FIELDS             25
-#define BHD_MSG_TYPE_CLEAR_SVCS             26
-#define BHD_MSG_TYPE_ADD_SVCS               27
-#define BHD_MSG_TYPE_COMMIT_SVCS            28
-#define BHD_MSG_TYPE_ACCESS_STATUS          29
-#define BHD_MSG_TYPE_NOTIFY                 30
-#define BHD_MSG_TYPE_FIND_CHR               31
+#define BHD_MSG_TYPE_DISC_ALL_DSCS          9
+#define BHD_MSG_TYPE_WRITE                  10
+#define BHD_MSG_TYPE_WRITE_CMD              11
+#define BHD_MSG_TYPE_EXCHANGE_MTU           12
+#define BHD_MSG_TYPE_GEN_RAND_ADDR          13
+#define BHD_MSG_TYPE_SET_RAND_ADDR          14
+#define BHD_MSG_TYPE_CONN_CANCEL            15
+#define BHD_MSG_TYPE_SCAN                   16
+#define BHD_MSG_TYPE_SCAN_CANCEL            17
+#define BHD_MSG_TYPE_SET_PREFERRED_MTU      18
+#define BHD_MSG_TYPE_ENC_INITIATE           19
+#define BHD_MSG_TYPE_CONN_FIND              20
+#define BHD_MSG_TYPE_RESET                  21
+#define BHD_MSG_TYPE_ADV_START              22
+#define BHD_MSG_TYPE_ADV_STOP               23
+#define BHD_MSG_TYPE_ADV_SET_DATA           24
+#define BHD_MSG_TYPE_ADV_RSP_SET_DATA       25
+#define BHD_MSG_TYPE_ADV_FIELDS             26
+#define BHD_MSG_TYPE_CLEAR_SVCS             27
+#define BHD_MSG_TYPE_ADD_SVCS               28
+#define BHD_MSG_TYPE_COMMIT_SVCS            29
+#define BHD_MSG_TYPE_ACCESS_STATUS          30
+#define BHD_MSG_TYPE_NOTIFY                 31
+#define BHD_MSG_TYPE_FIND_CHR               32
 
 #define BHD_MSG_TYPE_SYNC_EVT               2049
 #define BHD_MSG_TYPE_CONNECT_EVT            2050
 #define BHD_MSG_TYPE_DISCONNECT_EVT         2051
 #define BHD_MSG_TYPE_DISC_SVC_EVT           2052
 #define BHD_MSG_TYPE_DISC_CHR_EVT           2053
-#define BHD_MSG_TYPE_WRITE_ACK_EVT          2054
-#define BHD_MSG_TYPE_NOTIFY_RX_EVT          2055
-#define BHD_MSG_TYPE_MTU_CHANGE_EVT         2056
-#define BHD_MSG_TYPE_SCAN_EVT               2057
-#define BHD_MSG_TYPE_SCAN_TMO_EVT           2058
-#define BHD_MSG_TYPE_ENC_CHANGE_EVT         2059
-#define BHD_MSG_TYPE_RESET_EVT              2060
-#define BHD_MSG_TYPE_ACCESS_EVT             2061
+#define BHD_MSG_TYPE_DISC_DSC_EVT           2054
+#define BHD_MSG_TYPE_WRITE_ACK_EVT          2055
+#define BHD_MSG_TYPE_NOTIFY_RX_EVT          2056
+#define BHD_MSG_TYPE_MTU_CHANGE_EVT         2057
+#define BHD_MSG_TYPE_SCAN_EVT               2058
+#define BHD_MSG_TYPE_SCAN_TMO_EVT           2059
+#define BHD_MSG_TYPE_ENC_CHANGE_EVT         2060
+#define BHD_MSG_TYPE_RESET_EVT              2061
+#define BHD_MSG_TYPE_ACCESS_EVT             2062
 
 #define BHD_ADDR_TYPE_NONE                  255
 
@@ -113,6 +115,12 @@ struct bhd_disc_chr_uuid_req {
     uint16_t start_handle;
     uint16_t end_handle;
     ble_uuid_any_t chr_uuid;
+};
+
+struct bhd_disc_all_dscs_req {
+    uint16_t conn_handle;
+    uint16_t start_attr_handle;
+    uint16_t end_attr_handle;
 };
 
 struct bhd_write_req {
@@ -301,6 +309,7 @@ struct bhd_req {
         struct bhd_disc_svc_uuid_req disc_svc_uuid;
         struct bhd_disc_all_chrs_req disc_all_chrs;
         struct bhd_disc_chr_uuid_req disc_chr_uuid;
+        struct bhd_disc_all_dscs_req disc_all_dscs;
         struct bhd_write_req write;
         struct bhd_exchange_mtu_req exchange_mtu;
         struct bhd_gen_rand_addr_req gen_rand_addr;
@@ -350,6 +359,10 @@ struct bhd_disc_all_chrs_rsp {
 };
 
 struct bhd_disc_chr_uuid_rsp {
+    int status;
+};
+
+struct bhd_disc_all_dscs_rsp {
     int status;
 };
 
@@ -495,6 +508,7 @@ struct bhd_rsp {
         struct bhd_disc_svc_uuid_rsp disc_svc_uuid;
         struct bhd_disc_all_chrs_rsp disc_all_chrs;
         struct bhd_disc_chr_uuid_rsp disc_chr_uuid;
+        struct bhd_disc_all_dscs_rsp disc_all_dscs;
         struct bhd_write_rsp write;
         struct bhd_exchange_mtu_rsp exchange_mtu;
         struct bhd_gen_rand_addr_rsp gen_rand_addr;
@@ -543,6 +557,13 @@ struct bhd_disc_chr_evt {
     uint16_t conn_handle;
     int status;
     struct ble_gatt_chr chr;
+};
+
+struct bhd_disc_dsc_evt {
+    uint16_t conn_handle;
+    int status;
+    uint16_t chr_def_handle;
+    struct ble_gatt_dsc dsc;
 };
 
 struct bhd_write_ack_evt {
@@ -666,6 +687,7 @@ struct bhd_evt {
         struct bhd_disconnect_evt disconnect;
         struct bhd_disc_svc_evt disc_svc;
         struct bhd_disc_chr_evt disc_chr;
+        struct bhd_disc_dsc_evt disc_dsc;
         struct bhd_write_ack_evt write_ack;
         struct bhd_notify_rx_evt notify_rx;
         struct bhd_mtu_change_evt mtu_change;
