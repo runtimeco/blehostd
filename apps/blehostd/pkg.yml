@@ -28,6 +28,7 @@ pkg.deps:
     - "@apache-mynewt-core/encoding/json"
     - "@apache-mynewt-core/net/ip/native_sockets"
     - "@apache-mynewt-core/net/nimble/host"
+    - "@apache-mynewt-core/net/nimble/host/store/config"
     - "@apache-mynewt-core/sys/console/full"
     - "@apache-mynewt-core/sys/log/full"
     - "@apache-mynewt-core/sys/stats/full"
