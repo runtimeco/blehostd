@@ -885,7 +885,7 @@ bhd_json_dsc(cJSON *parent, struct bhd_dsc *out_dsc, char **out_err)
 {
     int rc;
 
-    *out_dsc = (struct bhd_dsc){ 0 };
+    *out_dsc = (struct bhd_dsc){{{0}}};
 
     bhd_json_uuid(parent, "uuid", &out_dsc->uuid, &rc);
     if (rc != 0) {
@@ -917,7 +917,7 @@ bhd_json_chr(cJSON *parent, struct bhd_chr *out_chr, char **out_err)
     cJSON *arr;
     int rc;
 
-    *out_chr = (struct bhd_chr){ 0 };
+    *out_chr = (struct bhd_chr){{{0}}};
 
     bhd_json_uuid(parent, "uuid", &out_chr->uuid, &rc);
     if (rc != 0) {
@@ -973,7 +973,7 @@ bhd_json_svc(cJSON *parent, struct bhd_svc *out_svc, char **out_err)
     int rc;
     int ci;
 
-    *out_svc = (struct bhd_svc){ 0 };
+    *out_svc = (struct bhd_svc){0};
 
     out_svc->type = bhd_json_svc_type(parent, "type", &rc);
     if (rc != 0) {

@@ -1481,7 +1481,7 @@ bhd_req_dec(const char *json, struct bhd_rsp *out_rsp)
     cJSON *root;
     int rc;
 
-    req = (struct bhd_req){ 0 };
+    req = (struct bhd_req){{0}};
 
     out_rsp->hdr.op = BHD_MSG_OP_RSP;
 
