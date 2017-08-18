@@ -49,6 +49,8 @@ long long int bhd_process_json_int_bounds(const cJSON *item,
 uint8_t *bhd_process_json_hex_string(const cJSON *item, int max_len,
                                      uint8_t *dst, int *out_dst_len, int *rc);
 uint8_t * bhd_process_json_addr(const cJSON *item, uint8_t *dst, int *rc);
+ble_uuid_t *bhd_process_json_uuid(const cJSON *item, ble_uuid_any_t *dst,
+                                  int *status);
 long long int bhd_json_int_bounds(const cJSON *parent, const char *name,
                                   long long int minval, long long int maxval,
                                   int *rc);
@@ -69,6 +71,9 @@ int ble_json_arr_hex_string(const cJSON *parent, const char *name, int elem_sz,
                             int *out_num_elems);
 int ble_json_arr_addr(const cJSON *parent, const char *name,
                       int max_elems, uint8_t *out_arr, int *out_num_elems);
+int ble_json_arr_uuid(const cJSON *parent, const char *name,
+                      int max_elems, ble_uuid_any_t *out_arr,
+                      int *out_num_elems);
 int bhd_json_addr_type(const cJSON *parent, const char *name, int *rc);
 int bhd_json_scan_filter_policy(const cJSON *parent, const char *name,
                                 int *rc);

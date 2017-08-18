@@ -731,6 +731,84 @@ ble_json_arr_addr(const cJSON *parent, const char *name,
     return 0;
 }
 
+struct ble_json_arr_arg_uuid {
+    ble_uuid_any_t *dst;
+    int max_elems;
+    int num_elems;
+};
+
+static int
+ble_json_arr_fn_uuid(const cJSON *item, int *rc, void *arg)
+{
+    struct ble_json_arr_arg_uuid *barg;
+    ble_uuid_any_t *elem;
+
+    barg = arg;
+
+    if (barg->num_elems >= barg->max_elems) {
+        *rc = SYS_ERANGE;
+        return 1;
+    }
+
+    elem = barg->dst + barg->num_elems;
+    bhd_process_json_uuid(item, elem, rc);
+    if (*rc != 0) {
+        return 1;
+    }
+
+    barg->num_elems++;
+
+    return 0;
+}
+
+int
+ble_json_arr_uuid(const cJSON *parent, const char *name,
+                  int max_elems, ble_uuid_any_t *out_arr, int *out_num_elems)
+{
+    struct ble_json_arr_arg_uuid arg;
+    int rc;
+
+    memset(&arg, 0, sizeof arg);
+    arg.dst = out_arr;
+    arg.max_elems = max_elems;
+
+    rc = bhd_json_arr_gen(parent, name, ble_json_arr_fn_uuid, &arg);
+    if (rc != 0) {
+        return rc;
+    }
+
+    *out_num_elems = arg.num_elems;
+    return 0;
+}
+
+int
+ble_json_arr_uuid128(const cJSON *parent, const char *name,
+                     int max_elems, ble_uuid_any_t *out_arr,
+                     int *out_num_elems)
+{
+    struct ble_json_arr_arg_uuid arg;
+    int rc;
+    int i;
+
+    memset(&arg, 0, sizeof arg);
+    arg.dst = out_arr;
+    arg.max_elems = max_elems;
+
+    rc = bhd_json_arr_gen(parent, name, ble_json_arr_fn_uuid, &arg);
+    if (rc != 0) {
+        return rc;
+    }
+
+    for (i = 0; i < arg.num_elems; i++) {
+        if (out_arr[i].u.type != BLE_UUID_TYPE_128) {
+            return SYS_EINVAL;
+        }
+    }
+
+    *out_num_elems = arg.num_elems;
+    return 0;
+}
+
 static int
 bhd_json_kv(bhd_kv_parse_fn *parse_cb, 
             const cJSON *parent, const char *name, int *rc)
@@ -805,8 +883,7 @@ bhd_json_addr(const cJSON *parent, const char *name, uint8_t *dst, int *rc)
 }
 
 ble_uuid_t *
-bhd_json_uuid(const cJSON *parent, const char *name, ble_uuid_any_t *dst,
-              int *status)
+bhd_process_json_uuid(const cJSON *item, ble_uuid_any_t *dst, int *status)
 {
     unsigned long ul;
     const char *srcptr;
@@ -820,7 +897,7 @@ bhd_json_uuid(const cJSON *parent, const char *name, ble_uuid_any_t *dst,
     int i;
 
     /* First, try a 16-bit UUID. */
-    u16 = bhd_json_int_bounds(parent, name, 1, 0xffff, &rc);
+    u16 = bhd_process_json_int_bounds(item, 1, 0xffff, &rc);
     if (rc == 0) {
         dst->u.type = BLE_UUID_TYPE_16;
         dst->u16.value = u16;
@@ -830,7 +907,7 @@ bhd_json_uuid(const cJSON *parent, const char *name, ble_uuid_any_t *dst,
 
     /* Next try a 128-bit UUID. */
     /* 00001101-0000-1000-8000-00805f9b34fb */
-    valstr = bhd_json_string(parent, name, status);
+    valstr = bhd_process_json_string(item, status);
     if (*status != 0) {
         return NULL;
     }
@@ -878,6 +955,21 @@ bhd_json_uuid(const cJSON *parent, const char *name, ble_uuid_any_t *dst,
     dst->u.type = BLE_UUID_TYPE_128;
     *status = 0;
     return &dst->u;
+}
+
+ble_uuid_t *
+bhd_json_uuid(const cJSON *parent, const char *name, ble_uuid_any_t *dst,
+              int *status)
+{
+    cJSON *item;
+
+    item = cJSON_GetObjectItem(parent, name);
+    if (item == NULL) {
+        *status = SYS_ENOENT;
+        return NULL;
+    }
+
+    return bhd_process_json_uuid(item, dst, status);
 }
 
 int

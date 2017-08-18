@@ -1063,12 +1063,15 @@ static int
 bhd_adv_fields_req_run(cJSON *parent,
                        struct bhd_req *req, struct bhd_rsp *rsp)
 {
+    ble_uuid_any_t uuids[sizeof req->adv_fields.uuids128 /
+                         sizeof req->adv_fields.uuids128[0]];
     const char *s;
     uint8_t u8;
     int slen;
     int num_elems;
     int num_bytes;
     int rc;
+    int i;
 
     req->adv_fields = (struct bhd_adv_fields_req){ 0 };
 
@@ -1129,14 +1132,15 @@ bhd_adv_fields_req_run(cJSON *parent,
         return 1;
     }
 
-    rc = ble_json_arr_hex_string(parent,
-                                 "uuids128",
-                                 16,
-                                 sizeof req->adv_fields.uuids128 /
-                                   sizeof req->adv_fields.uuids128[0],
-                             (uint8_t *)req->adv_fields.uuids128,
-                             &num_elems);
+    rc = ble_json_arr_uuid(parent,
+                           "uuids128",
+                           sizeof uuids / sizeof uuids[0],
+                           uuids,
+                           &num_elems);
     if (rc == 0) {
+        for (i = 0; i < num_elems; i++) {
+            memcpy(req->adv_fields.uuids128[i], uuids[i].u128.value, 16);
+        }
         req->adv_fields.num_uuids128 = num_elems;
     } else if (rc != SYS_ENOENT) {
         bhd_err_build(rsp, rc, "invalid uuids128");
