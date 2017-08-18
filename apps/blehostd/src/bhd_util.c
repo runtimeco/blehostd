@@ -1040,7 +1040,7 @@ bhd_json_create_byte_string(const uint8_t *data, int len)
 
     assert(len >= 0);
 
-    max_len = len * 5; /* 0xXX: */
+    max_len = len * 5 + 1; /* 0xXX: */
 
     buf = malloc_success(max_len);
 
@@ -1277,6 +1277,10 @@ bhd_hex_str(char *dst, int max_dst_len, int *out_dst_len, const uint8_t *src,
 
     off = 0;
     rem_len = max_dst_len;
+
+    if (max_dst_len >= 1) {
+        *dst = '\0';
+    }
 
     for (i = 0; i < src_len; i++) {
         rc = snprintf(dst + off, rem_len, "%s0x%02x",
