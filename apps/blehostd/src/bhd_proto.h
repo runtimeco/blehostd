@@ -44,18 +44,19 @@
 
 #define BHD_MSG_TYPE_SYNC_EVT               2049
 #define BHD_MSG_TYPE_CONNECT_EVT            2050
-#define BHD_MSG_TYPE_DISCONNECT_EVT         2051
-#define BHD_MSG_TYPE_DISC_SVC_EVT           2052
-#define BHD_MSG_TYPE_DISC_CHR_EVT           2053
-#define BHD_MSG_TYPE_DISC_DSC_EVT           2054
-#define BHD_MSG_TYPE_WRITE_ACK_EVT          2055
-#define BHD_MSG_TYPE_NOTIFY_RX_EVT          2056
-#define BHD_MSG_TYPE_MTU_CHANGE_EVT         2057
-#define BHD_MSG_TYPE_SCAN_EVT               2058
-#define BHD_MSG_TYPE_SCAN_TMO_EVT           2059
-#define BHD_MSG_TYPE_ENC_CHANGE_EVT         2060
-#define BHD_MSG_TYPE_RESET_EVT              2061
-#define BHD_MSG_TYPE_ACCESS_EVT             2062
+#define BHD_MSG_TYPE_CONN_CANCEL_EVT        2051
+#define BHD_MSG_TYPE_DISCONNECT_EVT         2052
+#define BHD_MSG_TYPE_DISC_SVC_EVT           2053
+#define BHD_MSG_TYPE_DISC_CHR_EVT           2054
+#define BHD_MSG_TYPE_DISC_DSC_EVT           2055
+#define BHD_MSG_TYPE_WRITE_ACK_EVT          2056
+#define BHD_MSG_TYPE_NOTIFY_RX_EVT          2057
+#define BHD_MSG_TYPE_MTU_CHANGE_EVT         2058
+#define BHD_MSG_TYPE_SCAN_EVT               2059
+#define BHD_MSG_TYPE_SCAN_TMO_EVT           2060
+#define BHD_MSG_TYPE_ENC_CHANGE_EVT         2061
+#define BHD_MSG_TYPE_RESET_EVT              2062
+#define BHD_MSG_TYPE_ACCESS_EVT             2063
 
 #define BHD_ADDR_TYPE_NONE                  255
 

@@ -30,6 +30,26 @@ bhd_gap_send_connect_evt(int status, uint16_t conn_handle, bhd_seq_t seq)
 }
 
 static int
+bhd_gap_send_conn_cancel_evt(bhd_seq_t seq)
+{
+    struct bhd_evt evt = {{0}};
+    int rc;
+
+    evt.hdr.op = BHD_MSG_OP_EVT;
+    evt.hdr.type = BHD_MSG_TYPE_CONN_CANCEL_EVT;
+    evt.hdr.seq = seq;
+
+    BHD_LOG(INFO, "conn_cancel\n");
+
+    rc = bhd_evt_send(&evt);
+    if (rc != 0) {
+        return rc;
+    }
+
+    return 0;
+}
+
+static int
 bhd_gap_send_disconnect_evt(int reason,
                             const struct ble_gap_conn_desc *desc,
                             bhd_seq_t seq)
@@ -261,6 +281,10 @@ bhd_gap_event(struct ble_gap_event *event, void *arg)
         bhd_gap_send_connect_evt(event->connect.status,
                                  event->connect.conn_handle,
                                  seq);
+        return 0;
+
+    case BLE_GAP_EVENT_CONN_CANCEL:
+        bhd_gap_send_conn_cancel_evt(seq);
         return 0;
 
     case BLE_GAP_EVENT_DISCONNECT:

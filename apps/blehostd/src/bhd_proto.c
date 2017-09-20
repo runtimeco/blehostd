@@ -165,6 +165,7 @@ typedef int bhd_evt_enc_fn(cJSON *parent, const struct bhd_evt *evt);
 static bhd_evt_enc_fn bhd_sync_evt_enc;
 static bhd_evt_enc_fn bhd_connect_evt_enc;
 static bhd_evt_enc_fn bhd_disconnect_evt_enc;
+static bhd_evt_enc_fn bhd_conn_cancel_evt_enc;
 static bhd_evt_enc_fn bhd_disc_svc_evt_enc;
 static bhd_evt_enc_fn bhd_disc_chr_evt_enc;
 static bhd_evt_enc_fn bhd_disc_dsc_evt_enc;
@@ -183,6 +184,7 @@ static const struct bhd_evt_dispatch_entry {
 } bhd_evt_dispatch[] = {
     { BHD_MSG_TYPE_SYNC_EVT,            bhd_sync_evt_enc },
     { BHD_MSG_TYPE_CONNECT_EVT,         bhd_connect_evt_enc },
+    { BHD_MSG_TYPE_CONN_CANCEL_EVT,     bhd_conn_cancel_evt_enc },
     { BHD_MSG_TYPE_DISCONNECT_EVT,      bhd_disconnect_evt_enc },
     { BHD_MSG_TYPE_DISC_SVC_EVT,        bhd_disc_svc_evt_enc },
     { BHD_MSG_TYPE_DISC_CHR_EVT,        bhd_disc_chr_evt_enc },
@@ -1921,6 +1923,12 @@ bhd_connect_evt_enc(cJSON *parent, const struct bhd_evt *evt)
         bhd_json_add_int(parent, "conn_handle", evt->connect.conn_handle);
     }
 
+    return 0;
+}
+
+static int
+bhd_conn_cancel_evt_enc(cJSON *parent, const struct bhd_evt *evt)
+{
     return 0;
 }
 
