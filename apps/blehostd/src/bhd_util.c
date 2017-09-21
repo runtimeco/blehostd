@@ -54,6 +54,7 @@ static const struct bhd_kv_str_int bhd_type_map[] = {
 
     { "sync_evt",           BHD_MSG_TYPE_SYNC_EVT },
     { "connect_evt",        BHD_MSG_TYPE_CONNECT_EVT },
+    { "conn_cancel_evt",    BHD_MSG_TYPE_CONN_CANCEL_EVT },
     { "disconnect_evt",     BHD_MSG_TYPE_DISCONNECT_EVT },
     { "disc_svc_evt",       BHD_MSG_TYPE_DISC_SVC_EVT },
     { "disc_chr_evt",       BHD_MSG_TYPE_DISC_CHR_EVT },
