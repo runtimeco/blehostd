@@ -21,6 +21,7 @@
 #include "mn_socket/mn_socket.h"
 #include "host/ble_hs.h"
 #include "defs/error.h"
+#include "config/config.h"
 
 #define BLEHOSTD_STACK_SIZE     (OS_STACK_ALIGN(512))
 #define BLEHOSTD_TASK_PRIO      3
@@ -512,6 +513,8 @@ main(int argc, char **argv)
     ble_hs_cfg.sync_cb = blehostd_on_sync;
     ble_hs_cfg.reset_cb = blehostd_on_reset;
     ble_hs_cfg.store_status_cb = ble_store_util_status_rr;
+
+    conf_load();
 
     bhd_gatts_init();
 

@@ -42,3 +42,6 @@ syscfg.vals:
 
     # Poll as frequently as possible to increase throughput.
     NATIVE_SOCKETS_POLL_ITVL: 1
+
+    # Persist config data to the FCB.
+    CONFIG_FCB: 1
