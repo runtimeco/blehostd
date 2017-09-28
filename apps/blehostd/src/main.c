@@ -164,15 +164,18 @@ static void
 blehostd_process_rsp_mq(struct os_event *ev)
 {
     struct os_mbuf *om;
+    os_sr_t sr;
     int rc;
 
     while ((om = os_mqueue_get(&blehostd_rsp_mq)) != NULL) {
         rc = blehostd_process_rsp(om);
         if (rc == MN_EAGAIN) {
             /* Socket cannot accommodate packet; try again later. */
+            OS_ENTER_CRITICAL(sr);
             STAILQ_INSERT_HEAD(&blehostd_rsp_mq.mq_head,
                                OS_MBUF_PKTHDR(om),
                                omp_next);
+            OS_EXIT_CRITICAL(sr);
             break;
         } else if (rc != 0) {
             BHD_LOG(INFO, "mn_sendto() failed; rc=%d\n", rc);
