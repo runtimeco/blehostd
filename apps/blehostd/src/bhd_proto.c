@@ -304,10 +304,18 @@ bhd_msg_hdr_dec(cJSON *parent, struct bhd_msg_hdr *hdr)
 static int
 bhd_msg_hdr_enc(cJSON *parent, const struct bhd_msg_hdr *hdr)
 {
+#if MYNEWT_VAL(BLEHOSTD_FRAME_COUNTER)
+    static uint32_t bhd_ctr;
+#endif
+
     cJSON_AddStringToObject(parent, "op", bhd_op_rev_parse(hdr->op));
     cJSON_AddStringToObject(parent, "type", bhd_type_rev_parse(hdr->type));
 
     bhd_json_add_int(parent, "seq", hdr->seq);
+
+#if MYNEWT_VAL(BLEHOSTD_FRAME_COUNTER)
+    bhd_json_add_int(parent, "ctr", bhd_ctr++);
+#endif
 
     return 0;
 }

@@ -15,6 +15,13 @@ syscfg.defs:
        restrictions:
          - "!BLEHOSTD_USE_SOCKET"
 
+    BLEHOSTD_PACKET_COUNTER:
+        description: >
+            Include an incrementing counter in each outgoing packet.  This
+            setting has no effect on observable behavior; it is only for
+            debugging.  The counter uses the key: "ctr".
+        value: 0
+
 syscfg.vals:
     OS_MAIN_TASK_PRIO: 1
 
