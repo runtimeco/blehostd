@@ -41,6 +41,7 @@
 #define BHD_MSG_TYPE_ACCESS_STATUS          30
 #define BHD_MSG_TYPE_NOTIFY                 31
 #define BHD_MSG_TYPE_FIND_CHR               32
+#define BHD_MSG_TYPE_OOB_SEC_DATA           33
 
 #define BHD_MSG_TYPE_SYNC_EVT               2049
 #define BHD_MSG_TYPE_CONNECT_EVT            2050
@@ -54,9 +55,10 @@
 #define BHD_MSG_TYPE_MTU_CHANGE_EVT         2058
 #define BHD_MSG_TYPE_SCAN_EVT               2059
 #define BHD_MSG_TYPE_SCAN_TMO_EVT           2060
-#define BHD_MSG_TYPE_ENC_CHANGE_EVT         2061
-#define BHD_MSG_TYPE_RESET_EVT              2062
-#define BHD_MSG_TYPE_ACCESS_EVT             2063
+#define BHD_MSG_TYPE_ADV_COMPLETE_EVT       2061
+#define BHD_MSG_TYPE_ENC_CHANGE_EVT         2062
+#define BHD_MSG_TYPE_RESET_EVT              2063
+#define BHD_MSG_TYPE_ACCESS_EVT             2064
 
 #define BHD_ADDR_TYPE_NONE                  255
 
@@ -680,6 +682,10 @@ struct bhd_access_evt {
     int data_len;
 };
 
+struct bhd_adv_complete_evt {
+    int reason;
+};
+
 struct bhd_evt {
     struct bhd_msg_hdr hdr;
     union {
@@ -696,6 +702,7 @@ struct bhd_evt {
         struct bhd_enc_change_evt enc_change;
         struct bhd_reset_evt reset;
         struct bhd_access_evt access;
+        struct bhd_adv_complete_evt adv_complete;
     };
 };
 

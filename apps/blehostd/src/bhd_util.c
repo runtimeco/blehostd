@@ -67,6 +67,7 @@ static const struct bhd_kv_str_int bhd_type_map[] = {
     { "enc_change_evt",     BHD_MSG_TYPE_ENC_CHANGE_EVT },
     { "reset_evt",          BHD_MSG_TYPE_RESET_EVT },
     { "access_evt",         BHD_MSG_TYPE_ACCESS_EVT },
+    { "adv_complete_evt",   BHD_MSG_TYPE_ADV_COMPLETE_EVT },
 
     { 0 },
 };

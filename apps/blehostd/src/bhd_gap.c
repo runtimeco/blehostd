@@ -235,6 +235,25 @@ bhd_gap_send_scan_tmo_evt(bhd_seq_t seq)
 }
 
 static int
+bhd_gap_send_adv_complete_evt(int reason, bhd_seq_t seq)
+{
+    struct bhd_evt evt = {{0}};
+    int rc;
+
+    evt.hdr.op = BHD_MSG_OP_EVT;
+    evt.hdr.type = BHD_MSG_TYPE_ADV_COMPLETE_EVT;
+    evt.hdr.seq = seq;
+    evt.adv_complete.reason = reason;
+
+    rc = bhd_evt_send(&evt);
+    if (rc != 0) {
+        return rc;
+    }
+
+    return 0;
+}
+
+static int
 bhd_gap_send_enc_change_evt(int status, uint16_t conn_handle, bhd_seq_t seq)
 {
     struct bhd_evt evt = {{0}};
@@ -312,6 +331,10 @@ bhd_gap_event(struct ble_gap_event *event, void *arg)
                                    event->notify_rx.attr_handle,
                                    event->notify_rx.indication,
                                    buf, attr_len);
+        return 0;
+
+    case BLE_GAP_EVENT_ADV_COMPLETE:
+        bhd_gap_send_adv_complete_evt(0, seq);
         return 0;
 
     case BLE_GAP_EVENT_ENC_CHANGE:
