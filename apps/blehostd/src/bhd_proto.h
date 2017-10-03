@@ -41,7 +41,7 @@
 #define BHD_MSG_TYPE_ACCESS_STATUS          30
 #define BHD_MSG_TYPE_NOTIFY                 31
 #define BHD_MSG_TYPE_FIND_CHR               32
-#define BHD_MSG_TYPE_OOB_SEC_DATA           33
+#define BHD_MSG_TYPE_SM_INJECT_IO           33
 
 #define BHD_MSG_TYPE_SYNC_EVT               2049
 #define BHD_MSG_TYPE_CONNECT_EVT            2050
@@ -304,9 +304,14 @@ struct bhd_find_chr_req {
     ble_uuid_any_t chr_uuid;
 };
 
-struct bhd_oob_sec_data_req {
+struct bhd_sm_inject_io_req {
     uint16_t conn_handle;
-    uint8_t data[16];
+    uint8_t action;
+
+    /* Only one of these is present, depending on the value of `action`. */
+    uint8_t oob_data[16];   /* Out-of-band. */
+    uint32_t passkey;       /* Input or display. */
+    uint8_t numcmp_accept;  /* Numeric comparison. */
 };
 
 struct bhd_req {
@@ -335,7 +340,7 @@ struct bhd_req {
         struct bhd_access_status_req access_status;
         struct bhd_notify_req notify;
         struct bhd_find_chr_req find_chr;
-        struct bhd_oob_sec_data_req oob_sec_data;
+        struct bhd_sm_inject_io_req sm_inject_io;
     };
 };
 
@@ -507,7 +512,7 @@ struct bhd_find_chr_rsp {
     uint16_t val_handle;
 };
 
-struct bhd_oob_sec_data_rsp {
+struct bhd_sm_inject_io_rsp {
     int status;
 };
 
@@ -544,7 +549,7 @@ struct bhd_rsp {
         struct bhd_access_status_rsp access_status;
         struct bhd_notify_rsp notify;
         struct bhd_find_chr_rsp find_chr;
-        struct bhd_oob_sec_data_rsp oob_sec_data;
+        struct bhd_sm_inject_io_rsp sm_inject_io;
     };
 };
 

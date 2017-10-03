@@ -82,6 +82,7 @@ int bhd_json_scan_filter_policy(const cJSON *parent, const char *name,
 int bhd_json_adv_conn_mode(const cJSON *parent, const char *name, int *rc);
 int bhd_json_adv_disc_mode(const cJSON *parent, const char *name, int *rc);
 int bhd_json_adv_filter_policy(const cJSON *parent, const char *name, int *rc);
+int bhd_json_sm_passkey_action(cJSON *parent, const char *name, int *rc);
 uint8_t *bhd_json_hex_string(const cJSON *parent, const char *name,
                              int max_len, uint8_t *dst, int *out_dst_len,
                              int *rc);

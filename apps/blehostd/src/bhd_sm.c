@@ -5,13 +5,31 @@
 #include "host/ble_hs.h"
 
 void
-bhd_sm_inject_oob(const struct bhd_req *req, struct bhd_rsp *out_rsp)
+bhd_sm_inject_io(const struct bhd_req *req, struct bhd_rsp *out_rsp)
 {
     struct ble_sm_io io;
 
-    io.action = BLE_SM_IOACT_OOB,
-    memcpy(io.oob, req->oob_sec_data.data, sizeof io.oob);
+    io.action = req->sm_inject_io.action;
+    switch (io.action) {
+    case BLE_SM_IOACT_OOB:
+        memcpy(io.oob, req->sm_inject_io.oob_data, sizeof io.oob);
+        break;
 
-    out_rsp->oob_sec_data.status =
-        ble_sm_inject_io(req->oob_sec_data.conn_handle, &io);
+    case BLE_SM_IOACT_INPUT:
+        /* Fall through. */
+    case BLE_SM_IOACT_DISP:
+        io.passkey = req->sm_inject_io.passkey;
+        break;
+
+    case BLE_SM_IOACT_NUMCMP:
+        io.numcmp_accept = req->sm_inject_io.numcmp_accept;
+        break;
+
+    default:
+        out_rsp->sm_inject_io.status = BLE_HS_EINVAL;
+        return;
+    }
+
+    out_rsp->sm_inject_io.status =
+        ble_sm_inject_io(req->sm_inject_io.conn_handle, &io);
 }

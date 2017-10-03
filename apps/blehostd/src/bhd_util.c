@@ -51,7 +51,7 @@ static const struct bhd_kv_str_int bhd_type_map[] = {
     { "access_status",      BHD_MSG_TYPE_ACCESS_STATUS },
     { "notify",             BHD_MSG_TYPE_NOTIFY },
     { "find_chr",           BHD_MSG_TYPE_FIND_CHR },
-    { "oob_sec_data",       BHD_MSG_TYPE_OOB_SEC_DATA },
+    { "sm_inject_io",       BHD_MSG_TYPE_SM_INJECT_IO },
 
     { "sync_evt",           BHD_MSG_TYPE_SYNC_EVT },
     { "connect_evt",        BHD_MSG_TYPE_CONNECT_EVT },
@@ -69,6 +69,7 @@ static const struct bhd_kv_str_int bhd_type_map[] = {
     { "reset_evt",          BHD_MSG_TYPE_RESET_EVT },
     { "access_evt",         BHD_MSG_TYPE_ACCESS_EVT },
     { "adv_complete_evt",   BHD_MSG_TYPE_ADV_COMPLETE_EVT },
+    { "passkey_evt",        BHD_MSG_TYPE_PASSKEY_EVT },
 
     { 0 },
 };
@@ -886,6 +887,12 @@ int
 bhd_json_adv_filter_policy(const cJSON *parent, const char *name, int *rc)
 {
     return bhd_json_kv(bhd_adv_filter_policy_parse, parent, name, rc);
+}
+
+int
+bhd_json_sm_passkey_action(cJSON *parent, const char *name, int *rc)
+{
+    return bhd_json_kv(bhd_sm_passkey_action_parse, parent, name, rc);
 }
 
 int
