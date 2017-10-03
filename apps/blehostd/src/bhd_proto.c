@@ -9,6 +9,7 @@
 #include "bhd_gap.h"
 #include "bhd_util.h"
 #include "bhd_id.h"
+#include "bhd_sm.h"
 #include "parse.h"
 #include "defs/error.h"
 #include "nimble/ble.h"
@@ -48,6 +49,7 @@ static bhd_req_run_fn bhd_commit_svcs_req_run;
 static bhd_req_run_fn bhd_access_status_req_run;
 static bhd_req_run_fn bhd_notify_req_run;
 static bhd_req_run_fn bhd_find_chr_req_run;
+static bhd_req_run_fn bhd_oob_sec_data_req_run;
 
 static const struct bhd_req_dispatch_entry {
     int req_type;
@@ -84,6 +86,7 @@ static const struct bhd_req_dispatch_entry {
     { BHD_MSG_TYPE_ACCESS_STATUS,       bhd_access_status_req_run },
     { BHD_MSG_TYPE_NOTIFY,              bhd_notify_req_run },
     { BHD_MSG_TYPE_FIND_CHR,            bhd_find_chr_req_run },
+    { BHD_MSG_TYPE_OOB_SEC_DATA,        bhd_oob_sec_data_req_run },
 
     { -1 },
 };
@@ -120,6 +123,7 @@ static bhd_subrsp_enc_fn bhd_commit_svcs_rsp_enc;
 static bhd_subrsp_enc_fn bhd_access_status_rsp_enc;
 static bhd_subrsp_enc_fn bhd_notify_rsp_enc;
 static bhd_subrsp_enc_fn bhd_find_chr_rsp_enc;
+static bhd_subrsp_enc_fn bhd_oob_sec_data_rsp_enc;
 
 static const struct bhd_rsp_dispatch_entry {
     int rsp_type;
@@ -157,6 +161,7 @@ static const struct bhd_rsp_dispatch_entry {
     { BHD_MSG_TYPE_ACCESS_STATUS,       bhd_access_status_rsp_enc },
     { BHD_MSG_TYPE_NOTIFY,              bhd_notify_rsp_enc },
     { BHD_MSG_TYPE_FIND_CHR,            bhd_find_chr_rsp_enc },
+    { BHD_MSG_TYPE_OOB_SEC_DATA,        bhd_oob_sec_data_rsp_enc },
 
     { -1 },
 };
@@ -1488,6 +1493,32 @@ bhd_find_chr_req_run(cJSON *parent,
  * @return                      1 if a response should be sent;
  *                              0 for no response.
  */
+static int
+bhd_oob_sec_data_req_run(cJSON *parent,
+                         struct bhd_req *req, struct bhd_rsp *rsp)
+{
+    int len;
+    int rc;
+
+    bhd_json_hex_string(parent, "data", sizeof req->oob_sec_data.data,
+                        req->oob_sec_data.data, &len, &rc);
+    if (rc != 0) {
+        rsp->oob_sec_data.status = rc;
+        return 1;
+    }
+    if (len != sizeof req->oob_sec_data.data) {
+        rsp->oob_sec_data.status = BLE_HS_EINVAL;
+        return 1;
+    }
+
+    bhd_sm_inject_oob(req, rsp);
+    return 1;
+}
+
+/**
+ * @return                      1 if a response should be sent;
+ *                              0 for no response.
+ */
 int
 bhd_req_dec(const char *json, struct bhd_rsp *out_rsp)
 {
@@ -1877,6 +1908,13 @@ bhd_find_chr_rsp_enc(cJSON *parent, const struct bhd_rsp *rsp)
     bhd_json_add_int(parent, "status", rsp->find_chr.status);
     bhd_json_add_int(parent, "def_handle", rsp->find_chr.def_handle);
     bhd_json_add_int(parent, "val_handle", rsp->find_chr.val_handle);
+    return 0;
+}
+
+static int
+bhd_oob_sec_data_rsp_enc(cJSON *parent, const struct bhd_rsp *rsp)
+{
+    bhd_json_add_int(parent, "status", rsp->oob_sec_data.status);
     return 0;
 }
 

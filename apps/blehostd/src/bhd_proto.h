@@ -303,6 +303,11 @@ struct bhd_find_chr_req {
     ble_uuid_any_t chr_uuid;
 };
 
+struct bhd_oob_sec_data_req {
+    uint16_t conn_handle;
+    uint8_t data[16];
+};
+
 struct bhd_req {
     struct bhd_msg_hdr hdr;
     union {
@@ -329,6 +334,7 @@ struct bhd_req {
         struct bhd_access_status_req access_status;
         struct bhd_notify_req notify;
         struct bhd_find_chr_req find_chr;
+        struct bhd_oob_sec_data_req oob_sec_data;
     };
 };
 
@@ -500,6 +506,10 @@ struct bhd_find_chr_rsp {
     uint16_t val_handle;
 };
 
+struct bhd_oob_sec_data_rsp {
+    int status;
+};
+
 struct bhd_rsp {
     struct bhd_msg_hdr hdr;
     union {
@@ -533,6 +543,7 @@ struct bhd_rsp {
         struct bhd_access_status_rsp access_status;
         struct bhd_notify_rsp notify;
         struct bhd_find_chr_rsp find_chr;
+        struct bhd_oob_sec_data_rsp oob_sec_data;
     };
 };
 

@@ -12,9 +12,9 @@
 typedef int bhd_kv_parse_fn(const char *src);
 
 static const struct bhd_kv_str_int bhd_op_map[] = {
-    { "request",        BHD_MSG_OP_REQ },
-    { "response",       BHD_MSG_OP_RSP },
-    { "event",          BHD_MSG_OP_EVT },
+    { "request",            BHD_MSG_OP_REQ },
+    { "response",           BHD_MSG_OP_RSP },
+    { "event",              BHD_MSG_OP_EVT },
     { 0 },
 };
 
@@ -51,6 +51,7 @@ static const struct bhd_kv_str_int bhd_type_map[] = {
     { "access_status",      BHD_MSG_TYPE_ACCESS_STATUS },
     { "notify",             BHD_MSG_TYPE_NOTIFY },
     { "find_chr",           BHD_MSG_TYPE_FIND_CHR },
+    { "oob_sec_data",       BHD_MSG_TYPE_OOB_SEC_DATA },
 
     { "sync_evt",           BHD_MSG_TYPE_SYNC_EVT },
     { "connect_evt",        BHD_MSG_TYPE_CONNECT_EVT },

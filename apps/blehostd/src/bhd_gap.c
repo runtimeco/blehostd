@@ -1,6 +1,5 @@
 #include <assert.h>
 #include <string.h>
-
 #include "blehostd.h"
 #include "bhd_proto.h"
 #include "bhd_gap.h"
