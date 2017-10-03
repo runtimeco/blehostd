@@ -131,6 +131,15 @@ static const struct bhd_kv_str_int bhd_gatt_access_op_map[] = {
     { "write_chr",      BLE_GATT_ACCESS_OP_WRITE_CHR },
     { "read_dsc",       BLE_GATT_ACCESS_OP_READ_DSC },
     { "write_dsc",      BLE_GATT_ACCESS_OP_WRITE_DSC },
+    { 0 },
+};
+
+static const struct bhd_kv_str_int bhd_sm_passkey_action_map[] = {
+    { "oob",            BLE_SM_IOACT_OOB },
+    { "input",          BLE_SM_IOACT_INPUT },
+    { "disp",           BLE_SM_IOACT_DISP },
+    { "numcmp",         BLE_SM_IOACT_NUMCMP },
+    { 0 },
 };
 
 const struct bhd_kv_str_int *
@@ -312,6 +321,20 @@ const char *
 bhd_gatt_access_op_rev_parse(int gatt_access_op)
 {
     return bhd_kv_str_int_rev_find(bhd_gatt_access_op_map, gatt_access_op);
+}
+
+int
+bhd_sm_passkey_action_parse(const char *sm_passkey_action_str)
+{
+    return bhd_kv_str_int_find(bhd_sm_passkey_action_map,
+                               sm_passkey_action_str);
+}
+
+const char *
+bhd_sm_passkey_action_rev_parse(int sm_passkey_action)
+{
+    return bhd_kv_str_int_rev_find(bhd_sm_passkey_action_map,
+                                   sm_passkey_action);
 }
 
 long long int
@@ -1280,6 +1303,21 @@ bhd_json_add_gatt_access_op(cJSON *parent, const char *name,
     const char *valstr;
 
     valstr = bhd_gatt_access_op_rev_parse(gatt_access_op);
+    if (valstr == NULL) {
+        return SYS_EINVAL;
+    }
+
+    cJSON_AddStringToObject(parent, name, valstr);
+    return 0;
+}
+
+int
+bhd_json_add_sm_passkey_action(cJSON *parent, const char *name,
+                               uint8_t sm_passkey_action)
+{
+    const char *valstr;
+
+    valstr = bhd_sm_passkey_action_rev_parse(sm_passkey_action);
     if (valstr == NULL) {
         return SYS_EINVAL;
     }

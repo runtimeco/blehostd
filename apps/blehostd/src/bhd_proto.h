@@ -59,6 +59,7 @@
 #define BHD_MSG_TYPE_ENC_CHANGE_EVT         2062
 #define BHD_MSG_TYPE_RESET_EVT              2063
 #define BHD_MSG_TYPE_ACCESS_EVT             2064
+#define BHD_MSG_TYPE_PASSKEY_EVT            2065
 
 #define BHD_ADDR_TYPE_NONE                  255
 
@@ -697,6 +698,14 @@ struct bhd_adv_complete_evt {
     int reason;
 };
 
+struct bhd_passkey_evt {
+    uint16_t conn_handle;
+    uint8_t action;
+
+    /* Optional. */
+    uint32_t numcmp;
+};
+
 struct bhd_evt {
     struct bhd_msg_hdr hdr;
     union {
@@ -714,6 +723,7 @@ struct bhd_evt {
         struct bhd_reset_evt reset;
         struct bhd_access_evt access;
         struct bhd_adv_complete_evt adv_complete;
+        struct bhd_passkey_evt passkey;
     };
 };
 

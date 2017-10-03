@@ -183,6 +183,7 @@ static bhd_evt_enc_fn bhd_adv_complete_evt_enc;
 static bhd_evt_enc_fn bhd_enc_change_evt_enc;
 static bhd_evt_enc_fn bhd_reset_evt_enc;
 static bhd_evt_enc_fn bhd_access_evt_enc;
+static bhd_evt_enc_fn bhd_passkey_evt_enc;
 
 static const struct bhd_evt_dispatch_entry {
     int msg_type;
@@ -204,6 +205,7 @@ static const struct bhd_evt_dispatch_entry {
     { BHD_MSG_TYPE_ENC_CHANGE_EVT,      bhd_enc_change_evt_enc },
     { BHD_MSG_TYPE_RESET_EVT,           bhd_reset_evt_enc },
     { BHD_MSG_TYPE_ACCESS_EVT,          bhd_access_evt_enc },
+    { BHD_MSG_TYPE_PASSKEY_EVT,         bhd_passkey_evt_enc },
 
     { -1 },
 };
@@ -2269,6 +2271,18 @@ bhd_access_evt_enc(cJSON *parent, const struct bhd_evt *evt)
     bhd_json_add_int(parent, "conn_handle", evt->access.conn_handle);
     bhd_json_add_int(parent, "att_handle", evt->access.att_handle);
     bhd_json_add_bytes(parent, "data", evt->access.data, evt->access.data_len);
+    return 0;
+}
+
+static int
+bhd_passkey_evt_enc(cJSON *parent, const struct bhd_evt *evt)
+{
+    bhd_json_add_int(parent, "conn_handle", evt->passkey.conn_handle);
+    bhd_json_add_sm_passkey_action(parent, "action", evt->passkey.action);
+
+    if (evt->passkey.action == BLE_SM_IOACT_NUMCMP) {
+        bhd_json_add_int(parent, "numcmp", evt->passkey.numcmp);
+    }
     return 0;
 }
 
