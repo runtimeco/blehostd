@@ -45,3 +45,6 @@ syscfg.vals:
 
     # Persist config data to the FCB.
     CONFIG_FCB: 1
+
+    # Enable the shell for debugging.
+    SHELL_TASK: 1
