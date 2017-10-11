@@ -400,7 +400,7 @@ bhd_gap_conn_initiate(const struct bhd_req *req)
 
     rc = ble_gap_connect(req->connect.own_addr_type,
                          &req->connect.peer_addr,
-                         15000,
+                         req->connect.duration_ms,
                          &params,
                          bhd_gap_event,
                          bhd_seq_arg(req->hdr.seq));
