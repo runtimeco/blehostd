@@ -49,7 +49,7 @@ static bhd_req_run_fn bhd_commit_svcs_req_run;
 static bhd_req_run_fn bhd_access_status_req_run;
 static bhd_req_run_fn bhd_notify_req_run;
 static bhd_req_run_fn bhd_find_chr_req_run;
-static bhd_req_run_fn bhd_oob_sec_data_req_run;
+static bhd_req_run_fn bhd_sm_inject_io_req_run;
 
 static const struct bhd_req_dispatch_entry {
     int req_type;
@@ -86,7 +86,7 @@ static const struct bhd_req_dispatch_entry {
     { BHD_MSG_TYPE_ACCESS_STATUS,       bhd_access_status_req_run },
     { BHD_MSG_TYPE_NOTIFY,              bhd_notify_req_run },
     { BHD_MSG_TYPE_FIND_CHR,            bhd_find_chr_req_run },
-    { BHD_MSG_TYPE_OOB_SEC_DATA,        bhd_oob_sec_data_req_run },
+    { BHD_MSG_TYPE_SM_INJECT_IO,        bhd_sm_inject_io_req_run },
 
     { -1 },
 };
@@ -123,7 +123,7 @@ static bhd_subrsp_enc_fn bhd_commit_svcs_rsp_enc;
 static bhd_subrsp_enc_fn bhd_access_status_rsp_enc;
 static bhd_subrsp_enc_fn bhd_notify_rsp_enc;
 static bhd_subrsp_enc_fn bhd_find_chr_rsp_enc;
-static bhd_subrsp_enc_fn bhd_oob_sec_data_rsp_enc;
+static bhd_subrsp_enc_fn bhd_sm_inject_io_rsp_enc;
 
 static const struct bhd_rsp_dispatch_entry {
     int rsp_type;
@@ -161,7 +161,7 @@ static const struct bhd_rsp_dispatch_entry {
     { BHD_MSG_TYPE_ACCESS_STATUS,       bhd_access_status_rsp_enc },
     { BHD_MSG_TYPE_NOTIFY,              bhd_notify_rsp_enc },
     { BHD_MSG_TYPE_FIND_CHR,            bhd_find_chr_rsp_enc },
-    { BHD_MSG_TYPE_OOB_SEC_DATA,        bhd_oob_sec_data_rsp_enc },
+    { BHD_MSG_TYPE_SM_INJECT_IO,        bhd_sm_inject_io_rsp_enc },
 
     { -1 },
 };
@@ -183,6 +183,7 @@ static bhd_evt_enc_fn bhd_adv_complete_evt_enc;
 static bhd_evt_enc_fn bhd_enc_change_evt_enc;
 static bhd_evt_enc_fn bhd_reset_evt_enc;
 static bhd_evt_enc_fn bhd_access_evt_enc;
+static bhd_evt_enc_fn bhd_passkey_evt_enc;
 
 static const struct bhd_evt_dispatch_entry {
     int msg_type;
@@ -204,6 +205,7 @@ static const struct bhd_evt_dispatch_entry {
     { BHD_MSG_TYPE_ENC_CHANGE_EVT,      bhd_enc_change_evt_enc },
     { BHD_MSG_TYPE_RESET_EVT,           bhd_reset_evt_enc },
     { BHD_MSG_TYPE_ACCESS_EVT,          bhd_access_evt_enc },
+    { BHD_MSG_TYPE_PASSKEY_EVT,         bhd_passkey_evt_enc },
 
     { -1 },
 };
@@ -1494,24 +1496,67 @@ bhd_find_chr_req_run(cJSON *parent,
  *                              0 for no response.
  */
 static int
-bhd_oob_sec_data_req_run(cJSON *parent,
+bhd_sm_inject_io_req_run(cJSON *parent,
                          struct bhd_req *req, struct bhd_rsp *rsp)
 {
     int len;
     int rc;
 
-    bhd_json_hex_string(parent, "data", sizeof req->oob_sec_data.data,
-                        req->oob_sec_data.data, &len, &rc);
+    req->sm_inject_io.conn_handle =
+        bhd_json_int_bounds(parent, "conn_handle", 0, UINT16_MAX, &rc);
     if (rc != 0) {
-        rsp->oob_sec_data.status = rc;
-        return 1;
-    }
-    if (len != sizeof req->oob_sec_data.data) {
-        rsp->oob_sec_data.status = BLE_HS_EINVAL;
+        rsp->sm_inject_io.status = rc;
         return 1;
     }
 
-    bhd_sm_inject_oob(req, rsp);
+    req->sm_inject_io.action =
+        bhd_json_sm_passkey_action(parent, "action", &rc);
+    if (rc != 0) {
+        rsp->sm_inject_io.status = rc;
+        return 1;
+    }
+
+    switch (req->sm_inject_io.action) {
+    case BLE_SM_IOACT_OOB:
+        bhd_json_hex_string(parent, "oob_data",
+                            sizeof req->sm_inject_io.oob_data,
+                            req->sm_inject_io.oob_data, &len, &rc);
+        if (rc != 0) {
+            rsp->sm_inject_io.status = rc;
+            return 1;
+        }
+        if (len != sizeof req->sm_inject_io.oob_data) {
+            rsp->sm_inject_io.status = BLE_HS_EINVAL;
+            return 1;
+        }
+        break;
+
+    case BLE_SM_IOACT_INPUT:
+        /* Fall through. */
+    case BLE_SM_IOACT_DISP:
+        req->sm_inject_io.passkey =
+            bhd_json_int_bounds(parent, "passkey", 0, UINT32_MAX, &rc);
+        if (rc != 0) {
+            rsp->sm_inject_io.status = rc;
+            return 1;
+        }
+        break;
+
+    case BLE_SM_IOACT_NUMCMP:
+        req->sm_inject_io.numcmp_accept =
+            bhd_json_bool(parent, "numcmp_accept", &rc);
+        if (rc != 0) {
+            rsp->sm_inject_io.status = rc;
+            return 1;
+        }
+        break;
+
+    default:
+        rsp->sm_inject_io.status = BLE_HS_EINVAL;
+        return 1;
+    }
+
+    bhd_sm_inject_io(req, rsp);
     return 1;
 }
 
@@ -1912,9 +1957,9 @@ bhd_find_chr_rsp_enc(cJSON *parent, const struct bhd_rsp *rsp)
 }
 
 static int
-bhd_oob_sec_data_rsp_enc(cJSON *parent, const struct bhd_rsp *rsp)
+bhd_sm_inject_io_rsp_enc(cJSON *parent, const struct bhd_rsp *rsp)
 {
-    bhd_json_add_int(parent, "status", rsp->oob_sec_data.status);
+    bhd_json_add_int(parent, "status", rsp->sm_inject_io.status);
     return 0;
 }
 
@@ -2269,6 +2314,18 @@ bhd_access_evt_enc(cJSON *parent, const struct bhd_evt *evt)
     bhd_json_add_int(parent, "conn_handle", evt->access.conn_handle);
     bhd_json_add_int(parent, "att_handle", evt->access.att_handle);
     bhd_json_add_bytes(parent, "data", evt->access.data, evt->access.data_len);
+    return 0;
+}
+
+static int
+bhd_passkey_evt_enc(cJSON *parent, const struct bhd_evt *evt)
+{
+    bhd_json_add_int(parent, "conn_handle", evt->passkey.conn_handle);
+    bhd_json_add_sm_passkey_action(parent, "action", evt->passkey.action);
+
+    if (evt->passkey.action == BLE_SM_IOACT_NUMCMP) {
+        bhd_json_add_int(parent, "numcmp", evt->passkey.numcmp);
+    }
     return 0;
 }
 

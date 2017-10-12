@@ -276,6 +276,31 @@ bhd_gap_send_enc_change_evt(int status, uint16_t conn_handle, bhd_seq_t seq)
 }
 
 static int
+bhd_gap_send_passkey_action_evt(uint16_t conn_handle, uint8_t action,
+                                uint32_t numcmp, bhd_seq_t seq)
+{
+    struct bhd_evt evt = {{0}};
+    int rc;
+
+    evt.hdr.op = BHD_MSG_OP_EVT;
+    evt.hdr.type = BHD_MSG_TYPE_PASSKEY_EVT;
+    evt.hdr.seq = seq;
+    evt.passkey.conn_handle = conn_handle;
+    evt.passkey.action = action;
+    evt.passkey.numcmp = numcmp;
+
+    BHD_LOG(INFO, "passkey; conn_handle=%d action=%d numcmp=%lu\n",
+            conn_handle, action, (unsigned long)numcmp);
+
+    rc = bhd_evt_send(&evt);
+    if (rc != 0) {
+        return rc;
+    }
+
+    return 0;
+}
+
+static int
 bhd_gap_event(struct ble_gap_event *event, void *arg)
 {
     uint8_t buf[BLE_ATT_ATTR_MAX_LEN];
@@ -340,6 +365,13 @@ bhd_gap_event(struct ble_gap_event *event, void *arg)
         bhd_gap_send_enc_change_evt(event->enc_change.status,
                                     event->enc_change.conn_handle,
                                     seq);
+        return 0;
+
+    case BLE_GAP_EVENT_PASSKEY_ACTION:
+        bhd_gap_send_passkey_action_evt(event->passkey.conn_handle,
+                                        event->passkey.params.action,
+                                        event->passkey.params.numcmp,
+                                        seq);
         return 0;
 
     case BLE_GAP_EVENT_REPEAT_PAIRING:

@@ -33,6 +33,8 @@ int bhd_svc_type_parse(const char *svc_type_str);
 const char *bhd_svc_type_rev_parse(int svc_type);
 int bhd_gatt_access_op_parse(const char *gatt_access_op_str);
 const char *bhd_gatt_access_op_rev_parse(int gatt_access_op);
+int bhd_sm_passkey_action_parse(const char *sm_passkey_action_str);
+const char *bhd_sm_passkey_action_rev_parse(int sm_passkey_action);
 
 int bhd_send_mtu_changed(uint32_t seq, uint16_t conn_handle, int status,
                          uint16_t mtu);
@@ -80,6 +82,7 @@ int bhd_json_scan_filter_policy(const cJSON *parent, const char *name,
 int bhd_json_adv_conn_mode(const cJSON *parent, const char *name, int *rc);
 int bhd_json_adv_disc_mode(const cJSON *parent, const char *name, int *rc);
 int bhd_json_adv_filter_policy(const cJSON *parent, const char *name, int *rc);
+int bhd_json_sm_passkey_action(cJSON *parent, const char *name, int *rc);
 uint8_t *bhd_json_hex_string(const cJSON *parent, const char *name,
                              int max_len, uint8_t *dst, int *out_dst_len,
                              int *rc);
@@ -110,6 +113,8 @@ int bhd_json_add_adv_event_type(cJSON *parent, const char *name,
                                 uint8_t adv_event_type);
 int bhd_json_add_gatt_access_op(cJSON *parent, const char *name,
                                 uint8_t gatt_access_op);
+int bhd_json_add_sm_passkey_action(cJSON *parent, const char *name,
+                                   uint8_t sm_passkey_action);
 cJSON *bhd_json_create_commit_dsc(const struct bhd_commit_dsc *dsc);
 cJSON *bhd_json_create_commit_chr(const struct bhd_commit_chr *chr);
 cJSON *bhd_json_create_commit_svc(const struct bhd_commit_svc *svc);

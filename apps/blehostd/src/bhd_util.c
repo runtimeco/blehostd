@@ -51,7 +51,7 @@ static const struct bhd_kv_str_int bhd_type_map[] = {
     { "access_status",      BHD_MSG_TYPE_ACCESS_STATUS },
     { "notify",             BHD_MSG_TYPE_NOTIFY },
     { "find_chr",           BHD_MSG_TYPE_FIND_CHR },
-    { "oob_sec_data",       BHD_MSG_TYPE_OOB_SEC_DATA },
+    { "sm_inject_io",       BHD_MSG_TYPE_SM_INJECT_IO },
 
     { "sync_evt",           BHD_MSG_TYPE_SYNC_EVT },
     { "connect_evt",        BHD_MSG_TYPE_CONNECT_EVT },
@@ -69,6 +69,7 @@ static const struct bhd_kv_str_int bhd_type_map[] = {
     { "reset_evt",          BHD_MSG_TYPE_RESET_EVT },
     { "access_evt",         BHD_MSG_TYPE_ACCESS_EVT },
     { "adv_complete_evt",   BHD_MSG_TYPE_ADV_COMPLETE_EVT },
+    { "passkey_evt",        BHD_MSG_TYPE_PASSKEY_EVT },
 
     { 0 },
 };
@@ -131,6 +132,15 @@ static const struct bhd_kv_str_int bhd_gatt_access_op_map[] = {
     { "write_chr",      BLE_GATT_ACCESS_OP_WRITE_CHR },
     { "read_dsc",       BLE_GATT_ACCESS_OP_READ_DSC },
     { "write_dsc",      BLE_GATT_ACCESS_OP_WRITE_DSC },
+    { 0 },
+};
+
+static const struct bhd_kv_str_int bhd_sm_passkey_action_map[] = {
+    { "oob",            BLE_SM_IOACT_OOB },
+    { "input",          BLE_SM_IOACT_INPUT },
+    { "disp",           BLE_SM_IOACT_DISP },
+    { "numcmp",         BLE_SM_IOACT_NUMCMP },
+    { 0 },
 };
 
 const struct bhd_kv_str_int *
@@ -312,6 +322,20 @@ const char *
 bhd_gatt_access_op_rev_parse(int gatt_access_op)
 {
     return bhd_kv_str_int_rev_find(bhd_gatt_access_op_map, gatt_access_op);
+}
+
+int
+bhd_sm_passkey_action_parse(const char *sm_passkey_action_str)
+{
+    return bhd_kv_str_int_find(bhd_sm_passkey_action_map,
+                               sm_passkey_action_str);
+}
+
+const char *
+bhd_sm_passkey_action_rev_parse(int sm_passkey_action)
+{
+    return bhd_kv_str_int_rev_find(bhd_sm_passkey_action_map,
+                                   sm_passkey_action);
 }
 
 long long int
@@ -866,6 +890,12 @@ bhd_json_adv_filter_policy(const cJSON *parent, const char *name, int *rc)
 }
 
 int
+bhd_json_sm_passkey_action(cJSON *parent, const char *name, int *rc)
+{
+    return bhd_json_kv(bhd_sm_passkey_action_parse, parent, name, rc);
+}
+
+int
 bhd_json_svc_type(const cJSON *parent, const char *name, int *rc)
 {
     return bhd_json_kv(bhd_svc_type_parse, parent, name, rc);
@@ -1280,6 +1310,21 @@ bhd_json_add_gatt_access_op(cJSON *parent, const char *name,
     const char *valstr;
 
     valstr = bhd_gatt_access_op_rev_parse(gatt_access_op);
+    if (valstr == NULL) {
+        return SYS_EINVAL;
+    }
+
+    cJSON_AddStringToObject(parent, name, valstr);
+    return 0;
+}
+
+int
+bhd_json_add_sm_passkey_action(cJSON *parent, const char *name,
+                               uint8_t sm_passkey_action)
+{
+    const char *valstr;
+
+    valstr = bhd_sm_passkey_action_rev_parse(sm_passkey_action);
     if (valstr == NULL) {
         return SYS_EINVAL;
     }
