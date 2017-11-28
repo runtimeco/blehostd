@@ -45,7 +45,7 @@
 
 #define BHD_MSG_TYPE_SYNC_EVT               2049
 #define BHD_MSG_TYPE_CONNECT_EVT            2050
-#define BHD_MSG_TYPE_CONN_CANCEL_EVT        2051
+/* Reserved                                 2051 */
 #define BHD_MSG_TYPE_DISCONNECT_EVT         2052
 #define BHD_MSG_TYPE_DISC_SVC_EVT           2053
 #define BHD_MSG_TYPE_DISC_CHR_EVT           2054
