@@ -509,7 +509,6 @@ main(int argc, char **argv)
                  NULL, BLEHOSTD_TASK_PRIO, OS_WAIT_FOREVER,
                  blehostd_stack, BLEHOSTD_STACK_SIZE);
 
-    ble_hs_evq_set(os_eventq_dflt_get());
     ble_hs_cfg.sync_cb = blehostd_on_sync;
     ble_hs_cfg.reset_cb = blehostd_on_reset;
     ble_hs_cfg.store_status_cb = ble_store_util_status_rr;
