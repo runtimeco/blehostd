@@ -4,3 +4,10 @@ repo.versions:
 
     "0-latest": "0.0.0"     # master
     "0-dev": "0.0.0"        # master
+
+repo.deps:
+    simutil:
+        type: git
+        url: 'git@github.com:runtimeco/simutil.git'
+        vers:
+            master: 0-dev
